@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joc de Desenat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="word-container">
+            <h1 id="generated-word">Cuvânt: _______</h1>
+        </div>
+        <div class="canvas-chat-container">
+            <canvas id="drawing-canvas" width="800" height="600"></canvas>
+            <div class="chat-container">
+                <div id="chat-messages"></div>
+                <input type="text" id="chat-input" placeholder="Introdu ghicirea ta...">
+                <button id="send-chat">Trimite</button>
+            </div>
+        </div>
+    <!-- acesta oragnizeaza elementele de control ale jocului -->
+    <div class="controls">
+        <button id="clear">Clear</button>
+        <button id="eraser">Eraser</button>
+        <input type="color" id="color-picker" title="Pick color">
+        <input type="range" id="brush-size" min="1" max="20" value="5" title="Brush size">
+    </div>
+    <!-- elementul HTML "canvas" este suprafata pe care utilizatorul deseneaza. Atributul id="drawing-canvas" 
+     este folosit pentru a accesa canvas-ul in JavaScript. -->
+    <!-- <canvas id="drawing-canvas" width="800" height="600"></canvas> -->
+    <script src="script.js"></script>
+</body>
+</html>
