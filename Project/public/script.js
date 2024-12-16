@@ -109,13 +109,7 @@ socket.addEventListener("message", (event) => {
         chatMessages.appendChild(chatMessage);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         //aifsare notificare in momentul in care cineva se conecteaza/deconecteaza
-    } else if (data.type === "system") {
-        const systemMessage = document.createElement("div");
-        systemMessage.textContent = data.message;
-        chatMessages.appendChild(systemMessage);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-       //transmiterea catre clienti in cazul in care se deseneaza 
-    } else if (data.type === "draw") {
+    }  else if (data.type === "draw") {
         ctx.lineWidth = data.lineWidth;
         ctx.strokeStyle = data.color;
         ctx.lineTo(data.x, data.y);

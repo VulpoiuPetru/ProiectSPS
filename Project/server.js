@@ -26,9 +26,9 @@ wss.on("connection", (ws) => {
         if (data.type === "chat") {
             // mesaje de chat
             broadcast({ type: "chat", message: `Utilizator: ${data.message}` });
-        } else {
+        } else if (["draw", "start", "stop", "clear"].includes(data.type)) {
             // alte mesaje (desen, etc.)
-            broadcast(message, ws);
+            broadcast(data, ws);
         }
     });
 
