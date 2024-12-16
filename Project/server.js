@@ -11,8 +11,26 @@ const server = app.listen(3000, () => {
     console.log(`http://localhost:3000`);
 });
 
+
+
 // creeaza WebSocket Server,permite comunicarea in timp real prin WebSocket
 const wss = new WebSocket.Server({ server });
+
+// Lista de cuvinte
+const words = ["floare", "masina", "soare", "pisica", "casa"];
+
+// Functia pentru a genera un cuvant aleator
+function generateRandomWord() {
+    const randomIndex = Math.floor(Math.random() * words.length);
+    return words[randomIndex];
+}
+
+// trimiterea cuvantului generat tuturor clientilor
+function sendGeneratedWord() {
+    const word = generateRandomWord();
+    broadcast({ type: "word", word }); // trimite cuvantul ca mesaj de tip "word"
+}
+
 //wss.on("connection"): seteaza un eveniment care se declanseaza cand un client WebSocket se conecteaza
 //ws: obiectul WebSocket care reprez conexiunea clientului
 wss.on("connection", (ws) => {
@@ -20,6 +38,10 @@ wss.on("connection", (ws) => {
 
     // notificare intrare utilizator
     broadcast({ type: "system", message: "Un nou utilizator a intrat în chat." }, ws);
+
+    //se genereaza un cuvant si se trimite clientului tocmai conectat
+    ws.send(JSON.stringify({ type: "word", word: generateRandomWord() }));
+
 //ws.on("message"): eveniment declansat cand serverul primeste un mesaj de la un client
     ws.on("message", (message) => {
         const data = JSON.parse(message);
@@ -47,4 +69,7 @@ function broadcast(data, excludeWs) {
     });
 }
 
-
+//se genereaza un cuvant la fiecare 30 de secunde care se trimite tuturor clientilor
+setInterval(() => {
+    sendGeneratedWord();
+}, 30000);

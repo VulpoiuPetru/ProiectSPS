@@ -18,6 +18,7 @@ let eraserActive = false;
 //conectare la websocket
 const socket =new WebSocket("ws://localhost:3000");
 
+
 // // Lista de cuvinte
 // const words = ["floare", "masina", "soare", "pisica", "casa"];
 // let generatedWord = ""
@@ -103,7 +104,10 @@ sendChatButton.addEventListener("click", () => {
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
 //adauga mesajele de la alti utilizatori in chat-ul aplicatiei
-    if (data.type === "chat") {
+if (data.type === "word") {
+    // afisarea cuvantului generat
+    generatedWordElement.textContent = `Cuvant: ${data.word}`;
+}if (data.type === "chat") {
         const chatMessage = document.createElement("div");
         chatMessage.textContent = data.message;
         chatMessages.appendChild(chatMessage);
