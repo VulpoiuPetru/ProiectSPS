@@ -29,6 +29,7 @@ function generateRandomWord() {
 function sendGeneratedWord() {
     const word = generateRandomWord();
     broadcast({ type: "word", word }); // trimite cuvantul ca mesaj de tip "word"
+    broadcast({ type: "resetTimer", timeLimit: 30  }); // trimite un semnal de resetare a timer-ulu
 }
 
 //wss.on("connection"): seteaza un eveniment care se declanseaza cand un client WebSocket se conecteaza

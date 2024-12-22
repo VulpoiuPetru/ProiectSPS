@@ -18,18 +18,6 @@ let eraserActive = false;
 //conectare la websocket
 const socket =new WebSocket("ws://localhost:3000");
 
-
-// // Lista de cuvinte
-// const words = ["floare", "masina", "soare", "pisica", "casa"];
-// let generatedWord = ""
-
-// // Functia pentru generarea unui cuvant
-// function generateWord() {
-//     generatedWord = words[Math.floor(Math.random() * words.length)];
-//     const hiddenWord = "_".repeat(generatedWord.length);
-//     generatedWordElement.textContent = `Cuvânt: ${hiddenWord}`;
-// }
-
 // functiile pt desenare
 canvas.addEventListener("mousedown", (e) => {
     drawing = true;
@@ -103,11 +91,18 @@ sendChatButton.addEventListener("click", () => {
 //aici face transmiterea catre server cu websocket
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
+
+    if (data.type === "resetTimer") {
+        resetTimer(data.timeLimit); // reseteaza timer-ul pe baza timpului primit de la server
+    }
+
 //adauga mesajele de la alti utilizatori in chat-ul aplicatiei
 if (data.type === "word") {
     // afisarea cuvantului generat
     generatedWordElement.textContent = `Cuvant: ${data.word}`;
-}if (data.type === "chat") {
+}
+else
+if (data.type === "chat") {
         const chatMessage = document.createElement("div");
         chatMessage.textContent = data.message;
         chatMessages.appendChild(chatMessage);
@@ -128,4 +123,99 @@ if (data.type === "word") {
     }
 });
 
-//generateWord();
+const FULL_DASH_ARRAY = 283;
+const WARNING_THRESHOLD = 10;
+const ALERT_THRESHOLD = 5;
+
+const COLOR_CODES = {
+    green: {
+        color: "green",
+    },
+    orange: {
+        color: "orange",
+        threshold: WARNING_THRESHOLD,
+    },
+    red: {
+        color: "red",
+        threshold: ALERT_THRESHOLD,
+    },
+};
+
+const TIME_LIMIT = 30;
+let timePassed = 0;
+let timeLeft = TIME_LIMIT;
+let timerInterval = null;
+let remainingPathColor = COLOR_CODES.green.color;
+
+document.getElementById("base-timer-path-remaining").classList.add(remainingPathColor);
+
+startTimer();
+
+function onTimesUp() {
+    clearInterval(timerInterval);
+}
+
+function startTimer() {
+    timerInterval = setInterval(() => {
+        timePassed += 1;
+        timeLeft = TIME_LIMIT - timePassed;
+        document.getElementById("base-timer-label").innerHTML = formatTime(timeLeft);
+        setCircleDasharray();
+        setRemainingPathColor(timeLeft);
+
+        if (timeLeft === 0) {
+            onTimesUp();
+        }
+    }, 1000);
+}
+
+function formatTime(time) {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+}
+
+function setRemainingPathColor(timeLeft) {
+    const { green, orange, red } = COLOR_CODES;
+    const remainingPath = document.getElementById("base-timer-path-remaining");
+
+    if (timeLeft <= red.threshold) {
+        remainingPath.classList.remove(orange.color);
+        remainingPath.classList.add(red.color);
+    } else if (timeLeft <= orange.threshold) {
+        remainingPath.classList.remove(green.color);
+        remainingPath.classList.add(orange.color);
+    } else {
+        remainingPath.classList.remove(orange.color, red.color);
+        remainingPath.classList.add(green.color);
+    }
+}
+
+function calculateTimeFraction() {
+    const rawTimeFraction = timeLeft / TIME_LIMIT;
+    return rawTimeFraction - (1 / TIME_LIMIT) * (1 - rawTimeFraction);
+}
+
+function setCircleDasharray() {
+    const circleDasharray = `${(
+        calculateTimeFraction() * FULL_DASH_ARRAY
+    ).toFixed(0)} 283`;
+    document
+        .getElementById("base-timer-path-remaining")
+        .setAttribute("stroke-dasharray", circleDasharray);
+}
+
+// reseteaza si porneste timer-ul
+function resetTimer(newTimeLimit) {
+    clearInterval(timerInterval); // opreste timer-ul curent
+    timePassed = 0; // reseteaza timpul trecut
+    timeLeft = newTimeLimit || TIME_LIMIT; // utilizeaza timpul trimis de server sau valoarea implicita
+    remainingPathColor = COLOR_CODES.green.color; // reseteaza culoarea la verde
+    document.getElementById("base-timer-path-remaining").className = `base-timer__path-remaining ${remainingPathColor}`;
+    document.getElementById("base-timer-label").innerHTML = formatTime(timeLeft); // actualizeaza afisajul timer-ului
+    setCircleDasharray(); // actualizeaza progresul grafic
+    startTimer(); // porneste un nou timer
+}
+
+initializeTimer();
+startTimer();
