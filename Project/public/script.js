@@ -27,6 +27,9 @@ let timerInterval = null;
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
 
+    if (data.type === 'round-timer') {
+        timerLabel.textContent = `${data.time}s`; // Afișează timpul rămas pentru rundă
+    }
     // Notifică jucătorul că este în lobby
     if (data.type === 'lobby-join') {
         lobbyContainer.style.display = "block"; // Afișează containerul lobby-ului
@@ -53,6 +56,9 @@ socket.addEventListener("message", (event) => {
                 generatedWordElement.textContent = `Cuvânt selectat: ${word}`;
                 overlay.style.display = "none"; // Ascunde overlay-ul
                 drawingEnabled = true; // Permite desenul pentru artist
+
+                // Pornește timer-ul pentru rundă
+                resetTimer(30); // Setează timpul pentru runda curentă (30 secunde)
             });
             wordChoicesContainer.appendChild(button);
         });
@@ -76,56 +82,6 @@ socket.addEventListener("message", (event) => {
         ctx.lineTo(data.coords.x, data.coords.y);
         ctx.stroke();
     }
-});
-
-// Trimiterea mesajelor de chat
-chatSendButton.addEventListener("click", () => {
-    const message = chatInput.value.trim();
-    if (message) {
-        socket.send(JSON.stringify({ type: 'chat', message }));
-        chatInput.value = ""; // Golește câmpul de intrare
-    }
-});
-
-// Evenimente pentru desen
-brushSize.addEventListener("input", (e) => (ctx.lineWidth = e.target.value));
-colorPicker.addEventListener("input", (e) => {
-    if (!eraserMode) {
-        ctx.strokeStyle = e.target.value; // Actualizează culoarea doar dacă nu este activ modul radieră
-    }
-});
-
-// Începe desenul
-canvas.addEventListener("mousedown", (e) => {
-    if (!drawingEnabled) return; // Nu permite desenul dacă jocul nu a început
-    isDrawing = true;
-    ctx.beginPath();
-    ctx.moveTo(e.offsetX, e.offsetY);
-});
-
-// Continuă desenul
-canvas.addEventListener("mousemove", (e) => {
-    if (!isDrawing || !drawingEnabled) return;
-
-    const coords = { x: e.offsetX, y: e.offsetY };
-    socket.send(JSON.stringify({ type: 'draw', coords })); // Trimite coordonatele către ceilalți
-
-    ctx.lineTo(coords.x, coords.y);
-    ctx.stroke();
-});
-
-// Oprește desenul
-canvas.addEventListener("mouseup", () => {
-    if (!drawingEnabled) return;
-    isDrawing = false;
-    ctx.closePath();
-});
-
-// Oprește desenul dacă mouse-ul iese din canvas
-canvas.addEventListener("mouseout", () => {
-    if (!drawingEnabled) return;
-    isDrawing = false;
-    ctx.closePath();
 });
 
 // Funcția pentru ștergere
@@ -173,3 +129,39 @@ function endRound() {
     overlay.style.display = "flex"; // Reafișează overlay-ul pentru selecția unui nou cuvânt
     socket.send(JSON.stringify({ type: "request-new-words" })); // Solicită noi cuvinte
 }
+
+// Trimiterea mesajelor de chat
+chatSendButton.addEventListener("click", () => {
+    const message = chatInput.value.trim();
+    if (message) {
+        socket.send(JSON.stringify({ type: 'chat', message }));
+        chatInput.value = ""; // Golește câmpul de intrare
+    }
+});
+
+// Gestionare evenimente de desen
+canvas.addEventListener("mousedown", (e) => {
+    if (!drawingEnabled) return;
+    isDrawing = true;
+    ctx.beginPath();
+    ctx.moveTo(e.offsetX, e.offsetY);
+});
+
+canvas.addEventListener("mousemove", (e) => {
+    if (!isDrawing || !drawingEnabled) return;
+
+    const coords = { x: e.offsetX, y: e.offsetY };
+    socket.send(JSON.stringify({ type: "draw", coords }));
+    ctx.lineTo(coords.x, coords.y);
+    ctx.stroke();
+});
+
+canvas.addEventListener("mouseup", () => {
+    isDrawing = false;
+    ctx.closePath();
+});
+
+canvas.addEventListener("mouseout", () => {
+    isDrawing = false;
+    ctx.closePath();
+});
