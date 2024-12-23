@@ -15,6 +15,7 @@ let lobby = []; // Lista jucătorilor în lobby
 let gameStarted = false; // Indică dacă jocul a început
 let startTimer = null; // Timer pentru începerea jocului
 let lobbyTimeLeft = 10; // Timp rămas în lobby (în secunde)
+let currentArtist = null; // Jucătorul care primește selecția cuvintelor
 
 // Lista de cuvinte pentru joc
 const words = ["floare", "masina", "soare", "pisica", "casa", "stea", "copac", "lac", "munte", "nor"];
@@ -34,10 +35,22 @@ function generateRandomWords() {
 // Funcție pentru începerea jocului
 function startGame() {
     gameStarted = true; // Setează jocul ca fiind început
-    const generatedWords = generateRandomWords(); // Generează cuvinte
-    broadcast({ type: 'start-game', words: generatedWords }); // Trimite cuvintele jucătorilor
-    console.log("Jocul a început cu cuvintele:", generatedWords);
-    lobby = []; // Golește lobby-ul pentru următorul joc
+    if (lobby.length > 0) {
+        currentArtist = lobby[0]; // Selectează primul jucător din lobby ca artist
+        const generatedWords = generateRandomWords();
+        currentArtist.send(JSON.stringify({ type: 'start-game', words: generatedWords })); // Trimite cuvintele artistului
+        broadcastToOthers(currentArtist, { type: 'info', message: "Așteptați ca artistul să selecteze un cuvânt și să deseneze!" });
+        console.log("Artistul a primit cuvintele:", generatedWords);
+    }
+}
+
+// Funcție pentru trimiterea mesajelor tuturor clienților, cu excepția unuia
+function broadcastToOthers(excludedClient, data) {
+    wss.clients.forEach((client) => {
+        if (client !== excludedClient && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
 }
 
 // Funcție pentru trimiterea mesajelor tuturor clienților
@@ -54,13 +67,12 @@ wss.on('connection', (ws) => {
     console.log('Un nou jucător s-a conectat.');
     lobby.push(ws); // Adaugă jucătorul în lobby
 
-    // Dacă este primul jucător, pornește timer-ul pentru începerea jocului
     if (!gameStarted && lobby.length === 1) {
         console.log("Primul jucător a intrat. Pornim timer-ul pentru lobby.");
         lobbyTimeLeft = 10;
         startTimer = setInterval(() => {
             lobbyTimeLeft -= 1;
-            broadcast({ type: 'lobby-timer', time: lobbyTimeLeft }); // Trimite timpul rămas clienților
+            broadcast({ type: 'lobby-timer', time: lobbyTimeLeft });
 
             if (lobbyTimeLeft <= 0) {
                 clearInterval(startTimer);
@@ -75,8 +87,24 @@ wss.on('connection', (ws) => {
     // Gestionare mesaje primite de la client
     ws.on('message', (message) => {
         const data = JSON.parse(message);
-        if (data.type === 'word-choice') {
-            console.log(`Jucătorul a selectat cuvântul: ${data.word}`);
+
+        switch (data.type) {
+            case 'word-choice':
+                console.log(`Artistul a selectat cuvântul: ${data.word}`);
+                broadcastToOthers(ws, { type: 'info', message: "Artistul a selectat un cuvânt! Acum puteți ghici ce desenează." });
+                break;
+
+            case 'chat':
+                console.log(`Mesaj de la client: ${data.message}`);
+                broadcast({ type: 'chat', message: data.message });
+                break;
+
+            case 'draw':
+                broadcastToOthers(ws, { type: 'draw', coords: data.coords });
+                break;
+
+            default:
+                console.log(`Tip de mesaj necunoscut: ${data.type}`);
         }
     });
 
@@ -84,6 +112,9 @@ wss.on('connection', (ws) => {
     ws.on('close', () => {
         console.log('Un jucător a părăsit lobby-ul.');
         lobby = lobby.filter((player) => player !== ws);
+        if (currentArtist === ws) {
+            currentArtist = null; // Resetează artistul dacă acesta s-a deconectat
+        }
         if (lobby.length === 0 && startTimer) {
             console.log("Toți jucătorii au părăsit lobby-ul. Oprim timer-ul.");
             clearInterval(startTimer); // Oprește timer-ul dacă nu mai sunt jucători

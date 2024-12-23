@@ -14,8 +14,11 @@ const timerLabel = document.getElementById("base-timer-label");
 const lobbyContainer = document.getElementById("lobby-container");
 const lobbyMessage = document.getElementById("lobby-message");
 const lobbyTimer = document.getElementById("lobby-timer");
+const chatInput = document.getElementById("chat-input");
+const chatSendButton = document.getElementById("send-chat");
+const chatMessages = document.getElementById("chat-messages");
 
-let drawingEnabled = false; // Desenul este permis doar după ce începe jocul
+let drawingEnabled = false; // Permite desenul doar artistului
 let isDrawing = false; // Starea desenului
 let eraserMode = false; // Modul radieră
 let timerInterval = null;
@@ -27,7 +30,7 @@ socket.addEventListener("message", (event) => {
     // Notifică jucătorul că este în lobby
     if (data.type === 'lobby-join') {
         lobbyContainer.style.display = "block"; // Afișează containerul lobby-ului
-        lobbyMessage.textContent = "Ești în lobby. Așteaptă să înceapă jocul..."; // Mesaj personalizat
+        lobbyMessage.textContent = "Ești în lobby. Așteaptă să înceapă jocul...";
     }
 
     // Actualizează timer-ul din lobby
@@ -38,12 +41,9 @@ socket.addEventListener("message", (event) => {
         }
     }
 
-    // Începerea jocului
+    // Începerea jocului pentru artist
     if (data.type === 'start-game') {
         overlay.style.display = "flex"; // Afișează overlay-ul pentru selecția cuvintelor
-        alert("Jocul a început! Alege un cuvânt.");
-
-        // Afișează cuvintele trimise de server
         wordChoicesContainer.innerHTML = ""; // Curăță lista anterioară
         data.words.forEach((word) => {
             const button = document.createElement("button");
@@ -52,13 +52,38 @@ socket.addEventListener("message", (event) => {
                 socket.send(JSON.stringify({ type: "word-choice", word })); // Trimite cuvântul ales
                 generatedWordElement.textContent = `Cuvânt selectat: ${word}`;
                 overlay.style.display = "none"; // Ascunde overlay-ul
-                drawingEnabled = true; // Permite desenul
-
-                // Pornește timer-ul pentru rundă
-                resetTimer(30);
+                drawingEnabled = true; // Permite desenul pentru artist
             });
             wordChoicesContainer.appendChild(button);
         });
+    }
+
+    // Mesaj pentru ceilalți jucători
+    if (data.type === 'info') {
+        alert(data.message); // Afișează mesajul pentru ceilalți jucători
+    }
+
+    // Mesaje din chat
+    if (data.type === 'chat') {
+        const newMessage = document.createElement("div");
+        newMessage.textContent = data.message;
+        chatMessages.appendChild(newMessage);
+        chatMessages.scrollTop = chatMessages.scrollHeight; // Derulează în jos
+    }
+
+    // Coordonate pentru desen
+    if (data.type === 'draw') {
+        ctx.lineTo(data.coords.x, data.coords.y);
+        ctx.stroke();
+    }
+});
+
+// Trimiterea mesajelor de chat
+chatSendButton.addEventListener("click", () => {
+    const message = chatInput.value.trim();
+    if (message) {
+        socket.send(JSON.stringify({ type: 'chat', message }));
+        chatInput.value = ""; // Golește câmpul de intrare
     }
 });
 
@@ -81,7 +106,11 @@ canvas.addEventListener("mousedown", (e) => {
 // Continuă desenul
 canvas.addEventListener("mousemove", (e) => {
     if (!isDrawing || !drawingEnabled) return;
-    ctx.lineTo(e.offsetX, e.offsetY);
+
+    const coords = { x: e.offsetX, y: e.offsetY };
+    socket.send(JSON.stringify({ type: 'draw', coords })); // Trimite coordonatele către ceilalți
+
+    ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
 });
 
