@@ -192,3 +192,14 @@ button, input[type="color"], input[type="range"] {
 .overlay.hidden {
     display: none;
 }
+#lobby-timer-container {
+    font-family: Arial, sans-serif;
+    color: #333;
+    margin-top: 20px;
+}
+
+#lobby-timer {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #ff4500;
+}

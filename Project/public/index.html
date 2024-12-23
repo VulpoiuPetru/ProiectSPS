@@ -7,10 +7,16 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Lobby Timer și Mesaj -->
+    <div id="lobby-container" style="text-align: center; margin-top: 20px;">
+        <h2 id="lobby-message">Ești în lobby. Așteaptă să înceapă jocul...</h2>
+        <h1 id="lobby-timer">10</h1>
+    </div>
+
     <!-- Overlay pentru selecția cuvintelor -->
-    <div id="overlay" class="overlay">
+    <div id="overlay" class="overlay" style="display: none;">
         <div class="word-selection">
-            <h2>Alege un cuvânt:</h2>
+            <h2>Selectează un cuvânt:</h2>
             <div id="word-choices"></div>
         </div>
     </div>
@@ -18,8 +24,9 @@
     <div class="game-container">
         <!-- Afișarea cuvântului selectat -->
         <div class="word-container">
-            <h1 id="generated-word">Cuvânt generat: _______</h1>
+            <h1 id="generated-word">Cuvânt selectat: _______</h1>
         </div>
+
         <!-- Zona de desen și chat -->
         <div class="canvas-chat-container">
             <canvas id="drawing-canvas" width="800" height="600"></canvas>
@@ -29,6 +36,7 @@
                 <button id="send-chat">Trimite</button>
             </div>
         </div>
+
         <!-- Controale pentru desen -->
         <div class="controls">
             <button id="clear">Clear</button>
@@ -36,7 +44,8 @@
             <input type="color" id="color-picker" title="Pick color">
             <input type="range" id="brush-size" min="1" max="20" value="5" title="Brush size">
         </div>
-        <!-- Timer -->
+
+        <!-- Timer pentru joc -->
         <div id="timer-container">
             <div class="base-timer">
                 <svg class="base-timer__svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
