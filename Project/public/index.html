@@ -7,10 +7,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-container">
-        <div class="word-container">
-            <h1 id="generated-word">Cuvant: _______</h1>
+    <!-- Overlay pentru selecția cuvintelor -->
+    <div id="overlay" class="overlay">
+        <div class="word-selection">
+            <h2>Alege un cuvânt:</h2>
+            <div id="word-choices"></div>
         </div>
+    </div>
+
+    <div class="game-container">
+        <!-- Afișarea cuvântului selectat -->
+        <div class="word-container">
+            <h1 id="generated-word">Cuvânt generat: _______</h1>
+        </div>
+        <!-- Zona de desen și chat -->
         <div class="canvas-chat-container">
             <canvas id="drawing-canvas" width="800" height="600"></canvas>
             <div class="chat-container">
@@ -19,40 +29,37 @@
                 <button id="send-chat">Trimite</button>
             </div>
         </div>
-    <!-- acesta oragnizeaza elementele de control ale jocului -->
-    <div class="controls">
-        <button id="clear">Clear</button>
-        <button id="eraser">Eraser</button>
-        <input type="color" id="color-picker" title="Pick color">
-        <input type="range" id="brush-size" min="1" max="20" value="5" title="Brush size">
-    </div>
-
-    <div id="timer-container">
-        <div class="base-timer">
-            <svg class="base-timer__svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <g class="base-timer__circle">
-                    <circle class="base-timer__path-elapsed" cx="50" cy="50" r="45"></circle>
-                    <path
-                        id="base-timer-path-remaining"
-                        stroke-dasharray="283"
-                        class="base-timer__path-remaining green"
-                        d="
-                          M 50, 50
-                          m -45, 0
-                          a 45,45 0 1,0 90,0
-                          a 45,45 0 1,0 -90,0
-                        "
-                    ></path>
-                </g>
-            </svg>
-            <span id="base-timer-label" class="base-timer__label">00:00</span>
+        <!-- Controale pentru desen -->
+        <div class="controls">
+            <button id="clear">Clear</button>
+            <button id="eraser">Eraser</button>
+            <input type="color" id="color-picker" title="Pick color">
+            <input type="range" id="brush-size" min="1" max="20" value="5" title="Brush size">
+        </div>
+        <!-- Timer -->
+        <div id="timer-container">
+            <div class="base-timer">
+                <svg class="base-timer__svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <g class="base-timer__circle">
+                        <circle class="base-timer__path-elapsed" cx="50" cy="50" r="45"></circle>
+                        <path
+                            id="base-timer-path-remaining"
+                            stroke-dasharray="283"
+                            class="base-timer__path-remaining green"
+                            d="
+                                M 50, 50
+                                m -45, 0
+                                a 45,45 0 1,0 90,0
+                                a 45,45 0 1,0 -90,0
+                            "
+                        ></path>
+                    </g>
+                </svg>
+                <span id="base-timer-label" class="base-timer__label">30:00</span>
+            </div>
         </div>
     </div>
-    
 
-    <!-- elementul HTML "canvas" este suprafata pe care utilizatorul deseneaza. Atributul id="drawing-canvas" 
-     este folosit pentru a accesa canvas-ul in JavaScript. -->
-    <!-- <canvas id="drawing-canvas" width="800" height="600"></canvas> -->
     <script src="script.js"></script>
 </body>
 </html>
