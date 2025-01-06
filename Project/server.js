@@ -1,9 +1,129 @@
 const express = require("express");
 const WebSocket = require("ws");
+const bodyParser = require("body-parser");
+const fs = require("fs");
+const path = require("path");
 
 // Configurare server HTTP
 const app = express();
+
+app.use(bodyParser.urlencoded({ extended: true })); // Pentru a procesa formularele
+
+let loggedInUsers = [];//pt a stoca utilizatorii autentificati
+
+// Rute pentru redirectionare
+app.get("/", (req, res) => {
+    res.sendFile(__dirname + "/public/login.html");
+});
+
+// Adauga utilizator nou în `users.json`
+app.post("/signup", (req, res) => {
+    const { emailOrPhone, password } = req.body;
+
+    if (!emailOrPhone || !password) {
+        return res.send(`<script>alert('Fill all fields!'); window.location='/';</script>`);
+    }
+
+    const usersFilePath = path.join(__dirname, "users.json");
+
+    // Citeste utilizatorii existenti din fisier
+    fs.readFile(usersFilePath, "utf8", (err, data) => {
+        let users = [];
+        if (err) {
+            if (err.code === "ENOENT") {
+                // Daca fisierul nu exista, initializează un array gol
+                console.log("Fișierul users.json nu exista. Va fi creat unul nou.");
+            } else {
+                console.error("Eroare la citirea fisierului users.json:", err);
+                return res.status(500).send("Eroare server.");
+            }
+        } else {
+            // Daca fisierul exista, incearca sa parcurgi datele
+            try {
+                users = JSON.parse(data) || [];
+            } catch (parseError) {
+                console.error("Eroare la parsarea fisierului users.json:", parseError);
+                return res.status(500).send("Eroare server.");
+            }
+        }
+
+        const existingUser = users.find((user) => user.emailOrPhone === emailOrPhone);
+
+        if (existingUser) {
+            return res.send(`<script>alert('Emailul is already signed!'); window.location='/';</script>`);
+        }
+
+        // Adauga noul utilizator
+        users.push({ emailOrPhone, password });
+        fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
+            if (err) {
+                console.error("Eroare la salvarea fisierului users.json:", err);
+                return res.status(500).send("Eroare server.");
+            }
+
+            res.send(`<script>alert('Success signed!'); window.location='/';</script>`);
+        });
+    });
+});
+
+// Verifica utilizatorul la login
+app.post("/login", (req, res) => {
+    const { emailOrPhone, password } = req.body;
+
+    if (!emailOrPhone || !password) {
+        return res.send(`<script>alert('Fill all fields!'); window.location='/';</script>`);
+    }
+
+    const usersFilePath = path.join(__dirname, "users.json");
+
+    fs.readFile(usersFilePath, "utf8", (err, data) => {
+        if (err) {
+            if (err.code === "ENOENT") {
+                console.error("Fisierul users.json nu exista.");
+                return res.send(`<script>alert('Nu exista utilizatori inregistrati!'); window.location='/';</script>`);
+            } else {
+                console.error("Eroare la citirea fisierului users.json:", err);
+                return res.status(500).send("Eroare server.");
+            }
+        }
+
+        let users;
+        try {
+            users = JSON.parse(data);
+        } catch (parseError) {
+            console.error("Eroare la parsarea fisierului users.json:", parseError);
+            return res.status(500).send("Eroare server.");
+        }
+
+        const user = users.find((user) => user.emailOrPhone === emailOrPhone && user.password === password);
+
+        if (user) {
+            loggedInUsers.push(emailOrPhone);
+            return res.redirect("/index.html");
+        } else {
+            return res.send(`<script>alert('You didn't write good!'); window.location='/';</script>`);
+        }
+    });
+});
+
+
+
+
+// Redirectioneaza la index dupa login
+// app.get("/index.html", (req, res) => {
+//     if (loggedInUsers.length > 0) {
+//         res.sendFile(__dirname + "/public/index.html");
+//     } else {
+//         res.redirect("/");
+//     }
+// });
+app.get("/index.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.use(express.static("public"));
+
+// Server
 const server = app.listen(3000, () => {
     console.log(`Serverul rulează la: http://localhost:3000`);
 });
