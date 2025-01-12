@@ -137,6 +137,7 @@ let currentArtist = null;
 let currentWord = "";
 let startTimer = null;
 let lobbyTimeLeft = 10;
+let guessedPlayers = new Set(); // Set pentru a evita duplicatele
 
 let currentRound = 0; // Runda curentă
     let totalRounds = 0; // Totalul rundelor (setat la numărul de jucători)
@@ -215,16 +216,47 @@ wss.on("connection", (ws) => {
 
         switch (data.type) {
             case "chat":
-                broadcast({ type: "chat", message: `Utilizator: ${data.message}` });
+                // Verifică dacă jucătorul a ghicit deja cuvântul
+                if (guessedPlayers.has(ws)) {
+                    ws.send(JSON.stringify({
+                        type: "system",
+                        message: "Ai ghicit deja cuvântul! Așteaptă următoarea rundă.",
+                    }));
+                    return;
+                }
+
+                // Verifică dacă mesajul este corect
+                if (data.message.toLowerCase() === currentWord.toLowerCase() && ws !== currentArtist) {
+                    // Adaugă jucătorul în lista celor care au ghicit
+                    guessedPlayers.add(ws);
+
+                    // Trimite un mesaj de felicitare doar jucătorului
+                    ws.send(JSON.stringify({
+                        type: "system",
+                        message: `Felicitări! Ai ghicit cuvântul: ${currentWord}.`,
+                    }));
+
+                    // Notifică restul jucătorilor
+                    broadcast({
+                        type: "system",
+                        message: `Un jucător a ghicit cuvântul! Continuați să ghiciți.`,
+                    }, ws);
+                } else {
+                    // Trimite mesajul în chat
+                    broadcast({
+                        type: "chat",
+                        message: `${ws.username}: ${data.message}`,
+                    });
+                }
                 break;
 
             case "choose-word":
                 if (ws === currentArtist) {
                     currentWord = data.word;
                     currentArtist.send(JSON.stringify({ type: "chosen-word", word: currentWord }));
-                    broadcast({ type: "start-timer", time: 10 }); // Exemplu: 60 de secunde
+                    broadcast({ type: "start-timer", time: 20 }); // Exemplu: 60 de secunde
                     broadcast({ type: "system", message: "Artistul a început să deseneze!" }, currentArtist);
-                    gameTimeLeft = 10; // Setează timpul de joc
+                    gameTimeLeft = 20; // Setează timpul de joc
                     gameTimer = setInterval(() => {
                         gameTimeLeft -= 1;
                         broadcast({ type: "update-timer", time: gameTimeLeft });
@@ -255,6 +287,8 @@ wss.on("connection", (ws) => {
             default:
                 console.log(`Tip de mesaj necunoscut: ${data.type}`);
         }
+        ws.username = `Player ${wss.clients.size}`;
+
     });
 
     ws.on("close", () => {
@@ -289,6 +323,7 @@ function startNewRound() {
 
     // Crește numărul rundei curente
     currentRound++;
+    guessedPlayers.clear(); // Resetează lista jucătorilor care au ghicit
 
     // Trimite mesaj despre runda curentă
     broadcast({

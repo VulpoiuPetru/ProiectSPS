@@ -278,3 +278,22 @@ function redirectToLogin() {
     // Redirecționează către pagina de login
     window.location.href = "/";
 }
+
+
+socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "system") {
+        const chatMessage = document.createElement("div");
+        chatMessage.textContent = data.message;
+
+        // Evidențiază mesajele de eroare
+        if (data.message.includes("Ai ghicit deja cuvântul")) {
+            chatMessage.style.color = "red";
+            chatMessage.style.fontWeight = "bold";
+        }
+
+        chatMessages.appendChild(chatMessage);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+});
