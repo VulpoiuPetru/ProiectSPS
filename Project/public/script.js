@@ -20,13 +20,14 @@ let lineWidth = 5;
 let eraserActive = false;
 let inLobby = true;
 let gameStarted = false;
+let isArtist = false;
 
 // Conectare WebSocket
 const socket = new WebSocket("ws://localhost:3000");
 
 // Funcționalitate desenare (desenul permis doar după lobby)
 canvas.addEventListener("mousedown", (e) => {
-    if (!gameStarted || inLobby) return;
+    if (!gameStarted || inLobby || !isArtist) return;
     drawing = true;
     lastCoords = { x: e.offsetX, y: e.offsetY };
     ctx.beginPath();
@@ -44,7 +45,7 @@ canvas.addEventListener("mousedown", (e) => {
 });
 
 canvas.addEventListener("mousemove", (e) => {
-    if (!drawing || !lastCoords || !gameStarted || inLobby) return;
+    if (!drawing || !lastCoords || !gameStarted || inLobby|| !isArtist) return;
 
     ctx.lineWidth = lineWidth;
     ctx.strokeStyle = eraserActive ? "#ffffff" : color;
@@ -65,7 +66,7 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 canvas.addEventListener("mouseup", () => {
-    if (!drawing) return;
+    if (!drawing|| !isArtist) return;
     drawing = false;
     ctx.closePath();
     lastCoords = null;
@@ -73,7 +74,7 @@ canvas.addEventListener("mouseup", () => {
 });
 
 canvas.addEventListener("mouseout", () => {
-    if (!drawing) return;
+    if (!drawing|| !isArtist) return;
     drawing = false;
     ctx.closePath();
     lastCoords = null;
@@ -81,11 +82,14 @@ canvas.addEventListener("mouseout", () => {
 });
 
 clearButton.addEventListener("click", () => {
+    if (!isArtist) return;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     socket.send(JSON.stringify({ type: "clear" }));
 });
 
 eraserButton.addEventListener("click", () => {
+    if (!isArtist) return;
     eraserActive = !eraserActive;
     eraserButton.textContent = eraserActive ? "Desen" : "Eraser";
 });
@@ -116,6 +120,7 @@ socket.addEventListener("message", (event) => {
     } else if (data.type === "choose-word") {
         overlay.style.display = "flex";
         wordChoicesContainer.innerHTML = "";
+        isArtist = true;
 
         data.words.forEach((word) => {
             const button = document.createElement("button");
@@ -128,6 +133,7 @@ socket.addEventListener("message", (event) => {
             wordChoicesContainer.appendChild(button);
         });
     } else if (data.type === "chosen-word") {
+        isArtist = data.artist === socket.id; // Compară cu ID-ul WebSocket
         generatedWordElement.textContent = `Cuvânt selectat: ${data.word}`;
     } else if (data.type === "chat") {
         const chatMessage = document.createElement("div");

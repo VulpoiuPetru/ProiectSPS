@@ -1,6 +1,10 @@
 [
   {
-    "emailOrPhone": "a@a.com",
+    "username": "tommy",
+    "password": "123"
+  },
+  {
+    "username": "petru",
     "password": "123"
   }
 ]

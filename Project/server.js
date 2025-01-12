@@ -18,9 +18,9 @@ app.get("/", (req, res) => {
 
 // Adauga utilizator nou în `users.json`
 app.post("/signup", (req, res) => {
-    const { emailOrPhone, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!emailOrPhone || !password) {
+    if (!username || !password) {
         return res.send(`<script>alert('Fill all fields!'); window.location='/';</script>`);
     }
 
@@ -47,14 +47,14 @@ app.post("/signup", (req, res) => {
             }
         }
 
-        const existingUser = users.find((user) => user.emailOrPhone === emailOrPhone);
+        const existingUser = users.find((user) => user.username === username);
 
         if (existingUser) {
-            return res.send(`<script>alert('Emailul is already signed!'); window.location='/';</script>`);
+            return res.send(`<script>alert('Username is already signed!'); window.location='/';</script>`);
         }
 
         // Adauga noul utilizator
-        users.push({ emailOrPhone, password });
+        users.push({ username, password });
         fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
             if (err) {
                 console.error("Eroare la salvarea fisierului users.json:", err);
@@ -68,9 +68,9 @@ app.post("/signup", (req, res) => {
 
 // Verifica utilizatorul la login
 app.post("/login", (req, res) => {
-    const { emailOrPhone, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!emailOrPhone || !password) {
+    if (!username || !password) {
         return res.send(`<script>alert('Fill all fields!'); window.location='/';</script>`);
     }
 
@@ -95,10 +95,10 @@ app.post("/login", (req, res) => {
             return res.status(500).send("Eroare server.");
         }
 
-        const user = users.find((user) => user.emailOrPhone === emailOrPhone && user.password === password);
+        const user = users.find((user) => user.username === username && user.password === password);
 
         if (user) {
-            loggedInUsers.push(emailOrPhone);
+            loggedInUsers.push(username);
             return res.redirect("/index.html");
         } else {
             return res.send(`<script>alert('You didn't write good!'); window.location='/';</script>`);
@@ -218,6 +218,8 @@ wss.on("connection", (ws) => {
             case "clear":
                 if (gameStarted && ws === currentArtist) {
                     broadcast(data, ws);
+                } else {
+                    ws.send(JSON.stringify({ type: "error", message: "Doar artistul curent poate desena!" }));
                 }
                 break;
 
