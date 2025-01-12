@@ -137,6 +137,9 @@ let currentArtist = null;
 let currentWord = "";
 let startTimer = null;
 let lobbyTimeLeft = 10;
+
+let currentRound = 0; // Runda curentă
+    let totalRounds = 0; // Totalul rundelor (setat la numărul de jucători)
 const words = ["floare", "masina", "soare", "pisica", "casa"];
 
 // Funcție pentru a genera trei cuvinte aleatorii
@@ -161,15 +164,26 @@ function broadcast(data, excludeWs = null) {
 }
 
 // Funcție pentru începerea jocului
+// function startGame() {
+//     if (lobby.length > 0) {
+//         gameStarted = true;
+//         currentArtist = lobby[0];
+//         const wordChoices = generateRandomWords();
+//         currentArtist.send(JSON.stringify({ type: "choose-word", words: wordChoices }));
+//         broadcast({ type: "system", message: "Artistul a fost selectat. Așteptați alegerea cuvântului." }, currentArtist);
+        
+//     }
+// }
+
 function startGame() {
     if (lobby.length > 0) {
         gameStarted = true;
-        currentArtist = lobby[0];
-        const wordChoices = generateRandomWords();
-        currentArtist.send(JSON.stringify({ type: "choose-word", words: wordChoices }));
-        broadcast({ type: "system", message: "Artistul a fost selectat. Așteptați alegerea cuvântului." }, currentArtist);
+        totalRounds = lobby.length; // Setează numărul de runde egal cu numărul de jucători
+        currentRound = 0; // Începe de la runda 0
+        startNewRound();
     }
 }
+
 
 // Timer pentru lobby
 function startLobbyTimer() {
@@ -208,7 +222,22 @@ wss.on("connection", (ws) => {
                 if (ws === currentArtist) {
                     currentWord = data.word;
                     currentArtist.send(JSON.stringify({ type: "chosen-word", word: currentWord }));
+                    broadcast({ type: "start-timer", time: 10 }); // Exemplu: 60 de secunde
                     broadcast({ type: "system", message: "Artistul a început să deseneze!" }, currentArtist);
+                    gameTimeLeft = 10; // Setează timpul de joc
+                    gameTimer = setInterval(() => {
+                        gameTimeLeft -= 1;
+                        broadcast({ type: "update-timer", time: gameTimeLeft });
+
+                        if (gameTimeLeft <= 0) {
+                            clearInterval(gameTimer);
+                            gameTimer = null;
+                            broadcast({ type: "system", message: "Timpul a expirat! Jocul s-a terminat." });
+                            // gameStarted = false;
+                            startNewRound(); // Începe o nouă rundă
+
+                        }
+                    }, 1000);
                 }
                 break;
 
@@ -216,12 +245,12 @@ wss.on("connection", (ws) => {
             case "draw":
             case "stop":
             case "clear":
-                if (gameStarted && ws === currentArtist) {
-                    broadcast(data, ws);
-                } else {
-                    ws.send(JSON.stringify({ type: "error", message: "Doar artistul curent poate desena!" }));
-                }
-                break;
+               if (gameStarted && ws === currentArtist) {
+                broadcast(data, ws);
+            } else {
+                ws.send(JSON.stringify({ type: "error", message: "Doar artistul curent poate desena!" }));
+            }
+            break;
 
             default:
                 console.log(`Tip de mesaj necunoscut: ${data.type}`);
@@ -240,3 +269,57 @@ wss.on("connection", (ws) => {
         }
     });
 });
+
+function startNewRound() {
+    if (currentRound >= totalRounds) {
+        // Trimite mesajul de terminare a jocului
+        broadcast({ type: "game-over", message: "Jocul s-a terminat. Veți fi redirecționați către login." });
+
+        // Resetează starea jocului
+        gameStarted = false;
+        currentArtist = null;
+        currentRound = 0;
+        return;
+    }
+
+    // Selectează următorul artist
+    const currentArtistIndex = lobby.indexOf(currentArtist);
+    const nextArtistIndex = (currentArtistIndex + 1) % lobby.length;
+    currentArtist = lobby[nextArtistIndex];
+
+    // Crește numărul rundei curente
+    currentRound++;
+
+    // Trimite mesaj despre runda curentă
+    broadcast({
+        type: "round-update",
+        currentRound: currentRound,
+        totalRounds: totalRounds,
+    });
+
+    // Resetează artiștii
+    broadcast({ type: "reset-artist" });
+    lobby.forEach((player) => {
+        const isNewArtist = player === currentArtist;
+        player.send(
+            JSON.stringify({
+                type: "artist-status",
+                isArtist: isNewArtist,
+            })
+        );
+    });
+
+    // Trimite cuvintele noului artist
+    const wordChoices = generateRandomWords();
+    currentArtist.send(JSON.stringify({ type: "choose-word", words: wordChoices }));
+}
+
+
+function endGame() {
+    broadcast({ type: "system", message: "Jocul s-a terminat! Sperăm că v-a plăcut!" });
+    gameStarted = false;
+    currentArtist = null;
+    currentRound = 0;
+    totalRounds = 0;
+}
+

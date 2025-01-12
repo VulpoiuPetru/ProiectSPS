@@ -110,6 +110,25 @@ sendChatButton.addEventListener("click", () => {
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
 
+    if (data.type === "reset-artist") {
+        isArtist = false; // Resetează statusul de artist
+        console.log("Nu mai sunt artist.");
+    }
+    else
+    if (data.type === "artist-status") {
+        isArtist = data.isArtist; // Actualizează statusul de artist
+        console.log(isArtist ? "Sunt artist!" : "Nu sunt artist.");
+    }
+    else
+    if (data.type === "start-timer") {
+        startGameTimer(data.time); // Pornește timerul
+    } else if (data.type === "update-timer") {
+        const timerLabel = document.getElementById("base-timer-label");
+        const minutes = Math.floor(data.time / 60);
+        const seconds = data.time % 60;
+        timerLabel.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    }
+    
     if (data.type === "lobby-timer") {
         lobbyTimerLabel.textContent = `Timp rămas: ${data.time}s`;
         if (data.time <= 0) {
@@ -132,7 +151,19 @@ socket.addEventListener("message", (event) => {
             });
             wordChoicesContainer.appendChild(button);
         });
-    } else if (data.type === "chosen-word") {
+         }
+        //  else if (data.type === "reset-game") {
+        //     resetGameUI(); // Resetează interfața pentru toți ceilalți
+        // }
+          else if (data.type === "update-timer") {
+        const timerLabel = document.getElementById("base-timer-label");
+        const minutes = Math.floor(data.time / 60);
+        const seconds = data.time % 60;
+        timerLabel.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    } else if (data.type === "system") {
+        console.log(data.message);
+    }
+     else if (data.type === "chosen-word") {
         isArtist = data.artist === socket.id; // Compară cu ID-ul WebSocket
         generatedWordElement.textContent = `Cuvânt selectat: ${data.word}`;
     } else if (data.type === "chat") {
@@ -157,3 +188,93 @@ socket.addEventListener("message", (event) => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 });
+
+
+function startGameTimer(duration) {
+    let timeLeft = duration;
+    const timerLabel = document.getElementById("base-timer-label");
+
+    const timerInterval = setInterval(() => {
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            timerLabel.textContent = "00:00";
+            resetGameUI();
+            // alert("Timpul a expirat! Jocul s-a terminat.");
+        } else {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerLabel.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+            timeLeft--;
+        }
+    }, 1000);
+}
+function resetCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "system" && data.message.includes("O nouă rundă începe")) {
+        resetCanvas();
+    }
+});
+
+socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "system" && data.message.includes("Ghiciți:")) {
+        const generatedWordElement = document.getElementById("generated-word");
+        const wordPlaceholder = data.message.split("Ghiciți: ")[1];
+        generatedWordElement.textContent = `Cuvânt de ghicit: ${wordPlaceholder}`;
+    }
+});
+function resetGameUI() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Curăță canvas-ul
+
+    if (!isArtist) {
+        // Ascunde overlay-ul doar pentru jucătorii care nu sunt artiști
+        overlay.style.display = "none";
+    }
+
+    generatedWordElement.textContent = "Cuvânt de ghicit: _______";
+}
+
+
+
+socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "reset-game") {
+        resetGameUI(); // Resetează interfața doar pentru ceilalți jucători
+    }
+});
+
+
+socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "round-update") {
+        const roundLabel = document.getElementById("round-label");
+        roundLabel.textContent = `Runda: ${data.currentRound}/${data.totalRounds}`;
+    }
+});
+
+
+socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "game-over") {
+        alert(data.message); // Notifică jucătorii
+        redirectToLogin();  // Redirecționează la login
+    }
+});
+function redirectToLogin() {
+    // Ascunde elementele jocului
+    document.querySelector(".game-container").style.display = "none";
+    document.getElementById("timer-container").style.display = "none";
+    document.getElementById("lobby-container").style.display = "none";
+
+    // Redirecționează către pagina de login
+    window.location.href = "/";
+}
