@@ -4,8 +4,9 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "start-server-and-test start http://localhost:3000 test:playwright",
+    "test:playwright": "playwright test"
   },
   "keywords": [],
   "author": "",
@@ -13,5 +14,11 @@
   "dependencies": {
     "express": "^4.21.2",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.5",
+    "concurrently": "^9.1.2",
+    "start-server-and-test": "^2.0.9"
   }
 }
