@@ -11,6 +11,12 @@ const { defineConfig, devices } = require('@playwright/test');
  * @see https://playwright.dev/docs/test-configuration
  */
 module.exports = defineConfig({
+  webServer: {
+    command: 'npm start', // Comanda pentru a porni serverul
+    port: 3000,           // Portul pe care serverul ascultă
+    timeout: 120 * 1000,  // Timeout pentru pornirea serverului (în milisecunde)
+    reuseExistingServer: true, // Reutilizează serverul dacă este deja pornit
+  },
   testDir: './tests',
   /* Run tests in files in parallel */
   fullyParallel: true,
