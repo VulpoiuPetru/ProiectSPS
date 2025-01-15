@@ -7,7 +7,7 @@ test.describe('Testare Logare', () => {
     await page.goto('http://localhost:3000');
 
     // Completeaza formularul de logare
-    await page.fill('input[name="username"]', 'tommy'); 
+    await page.fill('input[name="username"]', 'petru'); 
     await page.fill('input[name="password"]', '123');          
 
     // Trimite formularul
