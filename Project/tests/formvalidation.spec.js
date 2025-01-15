@@ -7,17 +7,19 @@ test.describe('Form Validation', () => {
         await page.goto('http://localhost:3000'); // Înlocuiește cu URL-ul aplicației tale
 
         // Completează câmpurile formularului
-        await page.fill('input[name="username"]', 'user'); // Selector pentru username
-        await page.fill('input[name="password"]', 'pass'); // Selector pentru password
+        await page.fill('input[name="username"]', 'tommy'); // Selector pentru username
+        await page.fill('input[name="password"]', '123'); // Selector pentru password
 
         // Trimite formularul
         await page.click('input[type="submit"]'); // Selector pentru butonul de submit
 
-        // Așteaptă redirecționarea
-        await page.waitForURL('http://localhost:3000/index.html'); // Înlocuiește cu URL-ul de redirecționare
-
-        // Verifică URL-ul paginii curente
-        expect(page.url()).toBe('http://localhost:3000/index.html');
+         // Așteaptă ca elementul să fie vizibil
+         const lobbyContainer = page.locator('#lobby-container');
+         await expect(lobbyContainer).toBeVisible();
+ 
+         // Verifică dacă mesajul din lobby este cel așteptat
+         const lobbyMessage = await page.locator('#lobby-message').innerText();
+         expect(lobbyMessage).toBe('Ești în lobby. Așteaptă să înceapă jocul...');
     });
 
     test('should show an alert when username or password is missing', async ({ page }) => {
