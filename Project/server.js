@@ -24,7 +24,7 @@ app.post("/signup", (req, res) => {
         return res.send(`<script>alert('Fill all fields!'); window.location='/';</script>`);
     }
 
-    const usersFilePath = path.join(__dirname, "users.json");
+    const usersFilePath = path.join(__dirname, "public/users.json");
 
     // Citeste utilizatorii existenti din fisier
     fs.readFile(usersFilePath, "utf8", (err, data) => {

@@ -187,6 +187,44 @@ socket.addEventListener("message", (event) => {
     } else if (data.type === "clear") {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
+
+    if (data.type === "system" && data.message.includes("O nouă rundă începe")) {
+        resetCanvas();
+    }
+
+    if (data.type === "system" && data.message.includes("Ghiciți:")) {
+        const generatedWordElement = document.getElementById("generated-word");
+        const wordPlaceholder = data.message.split("Ghiciți: ")[1];
+        generatedWordElement.textContent = `Cuvânt de ghicit: ${wordPlaceholder}`;
+    }
+
+    if (data.type === "reset-game") {
+        resetGameUI(); // Resetează interfața doar pentru ceilalți jucători
+    }
+
+    
+    if (data.type === "round-update") {
+        const roundLabel = document.getElementById("round-label");
+        roundLabel.textContent = `Runda: ${data.currentRound}/${data.totalRounds}`;
+    }
+
+    if (data.type === "game-over") {
+        alert(data.message); // Notifică jucătorii
+        redirectToLogin();  // Redirecționează la login
+    }
+    if (data.type === "system") {
+        const chatMessage = document.createElement("div");
+        chatMessage.textContent = data.message;
+
+        // Evidențiază mesajele de eroare
+        if (data.message.includes("Ai ghicit deja cuvântul")) {
+            chatMessage.style.color = "red";
+            chatMessage.style.fontWeight = "bold";
+        }
+
+        chatMessages.appendChild(chatMessage);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 });
 
 
@@ -212,23 +250,7 @@ function resetCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-socket.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
 
-    if (data.type === "system" && data.message.includes("O nouă rundă începe")) {
-        resetCanvas();
-    }
-});
-
-socket.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === "system" && data.message.includes("Ghiciți:")) {
-        const generatedWordElement = document.getElementById("generated-word");
-        const wordPlaceholder = data.message.split("Ghiciți: ")[1];
-        generatedWordElement.textContent = `Cuvânt de ghicit: ${wordPlaceholder}`;
-    }
-});
 function resetGameUI() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Curăță canvas-ul
 
@@ -239,36 +261,6 @@ function resetGameUI() {
 
     generatedWordElement.textContent = "Cuvânt de ghicit: _______";
 }
-
-
-
-socket.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === "reset-game") {
-        resetGameUI(); // Resetează interfața doar pentru ceilalți jucători
-    }
-});
-
-
-socket.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === "round-update") {
-        const roundLabel = document.getElementById("round-label");
-        roundLabel.textContent = `Runda: ${data.currentRound}/${data.totalRounds}`;
-    }
-});
-
-
-socket.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === "game-over") {
-        alert(data.message); // Notifică jucătorii
-        redirectToLogin();  // Redirecționează la login
-    }
-});
 function redirectToLogin() {
     // Ascunde elementele jocului
     document.querySelector(".game-container").style.display = "none";
@@ -280,20 +272,64 @@ function redirectToLogin() {
 }
 
 
-socket.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
+// socket.addEventListener("message", (event) => {
+//     const data = JSON.parse(event.data);
 
-    if (data.type === "system") {
-        const chatMessage = document.createElement("div");
-        chatMessage.textContent = data.message;
+   
+// });
 
-        // Evidențiază mesajele de eroare
-        if (data.message.includes("Ai ghicit deja cuvântul")) {
-            chatMessage.style.color = "red";
-            chatMessage.style.fontWeight = "bold";
-        }
+// socket.addEventListener("message", (event) => {
+//     const data = JSON.parse(event.data);
 
-        chatMessages.appendChild(chatMessage);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-});
+//     if (data.type === "system" && data.message.includes("Ghiciți:")) {
+//         const generatedWordElement = document.getElementById("generated-word");
+//         const wordPlaceholder = data.message.split("Ghiciți: ")[1];
+//         generatedWordElement.textContent = `Cuvânt de ghicit: ${wordPlaceholder}`;
+//     }
+// });
+// socket.addEventListener("message", (event) => {
+//     const data = JSON.parse(event.data);
+
+//     if (data.type === "reset-game") {
+//         resetGameUI(); // Resetează interfața doar pentru ceilalți jucători
+//     }
+// });
+
+
+// socket.addEventListener("message", (event) => {
+//     const data = JSON.parse(event.data);
+
+//     if (data.type === "round-update") {
+//         const roundLabel = document.getElementById("round-label");
+//         roundLabel.textContent = `Runda: ${data.currentRound}/${data.totalRounds}`;
+//     }
+// });
+
+
+// socket.addEventListener("message", (event) => {
+//     const data = JSON.parse(event.data);
+
+//     if (data.type === "game-over") {
+//         alert(data.message); // Notifică jucătorii
+//         redirectToLogin();  // Redirecționează la login
+//     }
+// });
+
+
+// socket.addEventListener("message", (event) => {
+//     const data = JSON.parse(event.data);
+
+//     if (data.type === "system") {
+//         const chatMessage = document.createElement("div");
+//         chatMessage.textContent = data.message;
+
+//         // Evidențiază mesajele de eroare
+//         if (data.message.includes("Ai ghicit deja cuvântul")) {
+//             chatMessage.style.color = "red";
+//             chatMessage.style.fontWeight = "bold";
+//         }
+
+//         chatMessages.appendChild(chatMessage);
+//         chatMessages.scrollTop = chatMessages.scrollHeight;
+//     }
+// });
