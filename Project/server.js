@@ -194,6 +194,7 @@ function startLobbyTimer() {
 
         if (lobbyTimeLeft <= 0) {
             clearInterval(startTimer);
+            broadcast({ type: "start-game" }); // Trimite un mesaj de început de joc
             startGame();
         }
     }, 1000);
@@ -250,29 +251,46 @@ wss.on("connection", (ws) => {
                 }
                 break;
 
-            case "choose-word":
-                if (ws === currentArtist) {
-                    currentWord = data.word;
-                    currentArtist.send(JSON.stringify({ type: "chosen-word", word: currentWord }));
-                    broadcast({ type: "start-timer", time: 20 }); // Exemplu: 60 de secunde
-                    broadcast({ type: "system", message: "Artistul a început să deseneze!" }, currentArtist);
-                    gameTimeLeft = 20; // Setează timpul de joc
-                    gameTimer = setInterval(() => {
-                        gameTimeLeft -= 1;
-                        broadcast({ type: "update-timer", time: gameTimeLeft });
+                case "choose-word":
+    if (ws === currentArtist) {
+        currentWord = data.word;
 
-                        if (gameTimeLeft <= 0) {
-                            clearInterval(gameTimer);
-                            gameTimer = null;
-                            broadcast({ type: "system", message: "Timpul a expirat! Jocul s-a terminat." });
-                            // gameStarted = false;
-                            startNewRound(); // Începe o nouă rundă
+        // Trimite cuvântul complet doar artistului
+        currentArtist.send(JSON.stringify({ type: "chosen-word", word: currentWord }));
 
-                        }
-                    }, 1000);
-                }
-                break;
+        // Trimite liniuțe pentru ceilalți jucători
+        const hiddenWord = currentWord.split("").map(() => "_").join(" "); // Transformă cuvântul în liniuțe
+        broadcast(
+            {
+                type: "hidden-word", // Folosim un tip separat pentru ceilalți
+                word: hiddenWord, // Liniuțe pentru ceilalți
+            },
+            currentArtist // Exclude artistul din broadcast
+        );
 
+        // Notifică despre începerea rundei și setează timer-ul
+        broadcast({ type: "start-timer", time: 20 });
+        broadcast({ type: "system", message: "Artistul a început să deseneze!" }, currentArtist);
+
+        // Setează timpul de joc
+        gameTimeLeft = 20;
+        gameTimer = setInterval(() => {
+            gameTimeLeft -= 1;
+            broadcast({ type: "update-timer", time: gameTimeLeft });
+
+            if (gameTimeLeft <= 0) {
+                clearInterval(gameTimer);
+                gameTimer = null;
+
+                // Trimite mesaj că timpul a expirat și începe o nouă rundă
+                broadcast({ type: "system", message: "Timpul a expirat! Jocul s-a terminat." });
+                startNewRound(); // Începe o nouă rundă
+            }
+        }, 1000);
+    }
+    break;
+
+                
             case "start":
             case "draw":
             case "stop":
@@ -307,8 +325,10 @@ wss.on("connection", (ws) => {
 function startNewRound() {
     if (currentRound >= totalRounds) {
         // Trimite mesajul de terminare a jocului
-        broadcast({ type: "game-over", message: "Jocul s-a terminat. Veți fi redirecționați către login." });
-
+        broadcast({
+            type: "game-over",
+            message: "Jocul s-a terminat. Veți fi redirecționați către pagina de login."
+        });
         // Resetează starea jocului
         gameStarted = false;
         currentArtist = null;
@@ -332,6 +352,11 @@ function startNewRound() {
         totalRounds: totalRounds,
     });
 
+  // Trimite un mesaj de resetare pentru cuvânt
+  broadcast({
+    type: "reset-word",
+});
+
     // Resetează artiștii
     broadcast({ type: "reset-artist" });
     lobby.forEach((player) => {
@@ -340,6 +365,7 @@ function startNewRound() {
             JSON.stringify({
                 type: "artist-status",
                 isArtist: isNewArtist,
+                playerId: currentArtist.username
             })
         );
     });

@@ -79,11 +79,18 @@ class GameView {
         this.overlay = document.getElementById("overlay");
         this.roundLabel = document.getElementById("round-label");
         this.timerLabel = document.getElementById("base-timer-label");
+        this.lobbymessage = document.getElementById("lobby-message"); // Adaugă această linie
+
     }
 
     updateLobbyTimer(time) {
         this.lobbyTimerLabel.textContent = `Timp rămas: ${time}s`;
+        if (time <= 0) {
+            this.lobbyTimerLabel.textContent = null // Ascunde overlay-ul când timpul ajunge la 0
+            this.lobbymessage.textContent = null;
+        }
     }
+    
 
     showWordChoices(words, callback) {
         this.overlay.style.display = "flex";
@@ -112,7 +119,11 @@ class GameView {
     }
 
     displayCurrentWord(word) {
-        this.generatedWordElement.textContent = `Cuvânt selectat: ${word}`;
+        if (!word) {
+            this.generatedWordElement.textContent = ""; // Șterge cuvântul afișat
+        } else {
+            this.generatedWordElement.textContent = `Cuvânt selectat: ${word}`;
+        }
     }
 
     updateBrushSize(size) {
@@ -167,7 +178,16 @@ class GameController {
                     this.view.overlay.style.display = "none";
                     this.socket.send(JSON.stringify({ type: "start-game" }));
                 }
-            } else if (data.type === "choose-word") {
+                
+            } else if (data.type === "start-game") {
+                this.model.startGame(); // Actualizează starea jocului în model
+                this.view.overlay.style.display = "none"; // Ascunde overlay-ul de lobby
+                console.log("Jocul a început!");
+             }else if (data.type === "game-over") {
+                alert(data.message); // Afișează un mesaj de notificare
+                window.location.href = "/"; // Redirecționează către pagina de login
+            }else if (data.type === "choose-word") {
+                
                 // Permitem artistului să aleagă cuvântul
                 this.model.isArtist = true;
                 this.view.enableCanvas();
@@ -184,7 +204,10 @@ class GameController {
                 this.socket.send(JSON.stringify({ type: "new-round" }));
             } else if (data.type === "start-timer") {
                 this.startRoundTimer(data.time);
-            } else if (data.type === "chat") {
+            }else if (data.type === "reset-word") {
+                this.model.setWord(""); // Resetează cuvântul în model
+                this.view.displayCurrentWord(""); // Șterge cuvântul afișat
+            }else if (data.type === "chat") {
                 this.model.addChatMessage(data.message);
                 this.view.addChatMessage(data.message);
             }else if (data.type === "system") {
@@ -220,13 +243,33 @@ class GameController {
                     this.view.enableCanvas(); // Permitem artistului să deseneze
                 } else {
                     this.view.disableCanvas(); // Dezactivăm canvas-ul pentru ceilalți
+                    this.model.drawing = false;
                 }
             }
+            if (data.type === "chosen-word") {
+                // Artistul primește cuvântul complet
+                this.view.displayCurrentWord(data.word);
+            } else if (data.type === "hidden-word") {
+                // Ceilalți jucători primesc liniuțele
+                this.view.displayCurrentWord(data.word);
+            }
+            else if (data.type === "artist-status") {
+                this.model.setArtist(data.isArtist ? this.model.currentPlayer : null);
+                if (data.isArtist) {
+                    this.view.enableCanvas(); // Activează canvas-ul doar pentru artist
+                } else {
+                    this.view.disableCanvas(); // Dezactivează canvas-ul pentru ceilalți
+                    this.model.drawing = false; // Oprește starea de desenare
+                }
+            }
+            
         });
 
         // Drawing events
         this.view.canvas.addEventListener("mousedown", (e) => {
-            if (!this.model.gameStarted || !this.model.isArtist) return;
+            if (!this.model.gameStarted || !this.model.isArtist) {
+                return;
+            }    
             this.model.drawing = true;
             const coords = { x: e.offsetX, y: e.offsetY };
             this.view.ctx.beginPath();
@@ -261,7 +304,9 @@ class GameController {
         });
 
         this.view.canvas.addEventListener("mouseup", () => {
-            if (!this.model.isArtist) return;
+            if (!this.model.isArtist) {
+                return;
+            }
             this.model.drawing = false;
             this.view.ctx.closePath();
         });
