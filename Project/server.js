@@ -11,100 +11,76 @@ app.use(bodyParser.urlencoded({ extended: true })); // Pentru a procesa formular
 
 let loggedInUsers = [];//pt a stoca utilizatorii autentificati
 
+const { Pool } = require("pg");
+
+// Configurare conexiune PostgreSQL
+const pool = new Pool({
+    user: "postgres", // Înlocuiește cu utilizatorul tău PostgreSQL
+    host: "localhost", // Adresa serverului PostgreSQL
+    database: "Sps", // Numele bazei de date
+    password:"123",
+    port: 5432, // Portul default pentru PostgreSQL
+});
+
+
+
 // Rute pentru redirectionare
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/public/login.html");
 });
 
 // Adauga utilizator nou în `users.json`
-app.post("/signup", (req, res) => {
+app.post("/signup", async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
         return res.send(`<script>alert('Fill all fields!'); window.location='/';</script>`);
     }
 
-    const usersFilePath = path.join(__dirname, "public/users.json");
-
-    // Citeste utilizatorii existenti din fisier
-    fs.readFile(usersFilePath, "utf8", (err, data) => {
-        let users = [];
-        if (err) {
-            if (err.code === "ENOENT") {
-                // Daca fisierul nu exista, initializează un array gol
-                console.log("Fișierul users.json nu exista. Va fi creat unul nou.");
-            } else {
-                console.error("Eroare la citirea fisierului users.json:", err);
-                return res.status(500).send("Eroare server.");
-            }
-        } else {
-            // Daca fisierul exista, incearca sa parcurgi datele
-            try {
-                users = JSON.parse(data) || [];
-            } catch (parseError) {
-                console.error("Eroare la parsarea fisierului users.json:", parseError);
-                return res.status(500).send("Eroare server.");
-            }
-        }
-
-        const existingUser = users.find((user) => user.username === username);
-
-        if (existingUser) {
+    try {
+        // Verifică dacă utilizatorul există deja
+        const userCheck = await pool.query("SELECT * FROM users WHERE username = $1", [username]);
+        if (userCheck.rows.length > 0) {
             return res.send(`<script>alert('Username is already signed!'); window.location='/';</script>`);
         }
 
-        // Adauga noul utilizator
-        users.push({ username, password });
-        fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), (err) => {
-            if (err) {
-                console.error("Eroare la salvarea fisierului users.json:", err);
-                return res.status(500).send("Eroare server.");
-            }
-
-            res.send(`<script>alert('Success signed!'); window.location='/';</script>`);
-        });
-    });
+        // Adaugă utilizatorul în baza de date
+        await pool.query("INSERT INTO users (username, password) VALUES ($1, $2)", [username, password]);
+        res.send(`<script>alert('Success signed!'); window.location='/';</script>`);
+    } catch (err) {
+        console.error("Eroare la baza de date:", err);
+        res.status(500).send("Eroare server.");
+    }
 });
 
+
 // Verifica utilizatorul la login
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
         return res.send(`<script>alert('Fill all fields!'); window.location='/';</script>`);
     }
 
-    const usersFilePath = path.join(__dirname, "users.json");
+    try {
+        // Verifică utilizatorul în baza de date
+        const result = await pool.query(
+            "SELECT * FROM users WHERE username = $1 AND password = $2",
+            [username, password]
+        );
 
-    fs.readFile(usersFilePath, "utf8", (err, data) => {
-        if (err) {
-            if (err.code === "ENOENT") {
-                console.error("Fisierul users.json nu exista.");
-                return res.send(`<script>alert('Nu exista utilizatori inregistrati!'); window.location='/';</script>`);
-            } else {
-                console.error("Eroare la citirea fisierului users.json:", err);
-                return res.status(500).send("Eroare server.");
-            }
-        }
-
-        let users;
-        try {
-            users = JSON.parse(data);
-        } catch (parseError) {
-            console.error("Eroare la parsarea fisierului users.json:", parseError);
-            return res.status(500).send("Eroare server.");
-        }
-
-        const user = users.find((user) => user.username === username && user.password === password);
-
-        if (user) {
+        if (result.rows.length > 0) {
             loggedInUsers.push(username);
             return res.redirect("/index.html");
         } else {
-            return res.send(`<script>alert('You didn't write good!'); window.location='/';</script>`);
+            return res.send(`<script>alert('You didn\\'t write good!'); window.location='/';</script>`);
         }
-    });
+    } catch (err) {
+        console.error("Eroare la baza de date:", err);
+        res.status(500).send("Eroare server.");
+    }
 });
+
 
 
 
