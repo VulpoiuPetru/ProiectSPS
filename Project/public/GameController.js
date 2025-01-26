@@ -1,168 +1,18 @@
-class GameModel {
-    constructor() {
-        this.players = [];
-        this.currentWord = "";
-        this.isArtist = false;
-        this.lobbyTime = 30;
-        this.gameStarted = false;
-        this.drawingData = [];
-        this.chatMessages = [];
-        this.color = "#000000";
-        this.lineWidth = 5;
-        this.eraserActive = false;
-        this.totalRounds = 0;
-        this.currentRound = 0;
-        this.drawing = false;
-        this.currentPlayer = null; // Noul jucător curent
-    }
+import { GameModel } from "./GameModel.js";
+import { GameView } from "./GameView.js";
 
-    setWord(word) {
-        this.currentWord = word;
-    }
-
-    addChatMessage(message) {
-        this.chatMessages.push(message);
-    }
-
-    startGame() {
-        this.gameStarted = true;
-    }
-
-    resetGame() {
-        this.gameStarted = false;
-        this.currentWord = "";
-        this.drawingData = [];
-        this.currentRound = 0;
-        this.currentPlayer = null;
-    }
-
-    toggleEraser() {
-        this.eraserActive = !this.eraserActive;
-    }
-
-    setColor(color) {
-        this.color = color;
-    }
-
-    setLineWidth(width) {
-        this.lineWidth = width;
-    }
-
-    setRounds(totalRounds) {
-        this.totalRounds = totalRounds;
-    }
-
-    incrementRound() {
-        this.currentRound += 1;
-    }
-
-    setArtist(playerId) {
-        this.currentPlayer = playerId;
-        this.isArtist = (this.currentPlayer === playerId);  // doar jucătorul curent poate fi artist
-    }
-}
-
-class GameView {
-    constructor() {
-        this.canvas = document.getElementById("drawing-canvas");
-        this.ctx = this.canvas.getContext("2d");
-        this.clearButton = document.getElementById("clear");
-        this.eraserButton = document.getElementById("eraser");
-        this.colorPicker = document.getElementById("color-picker");
-        this.brushSize = document.getElementById("brush-size");
-        this.generatedWordElement = document.getElementById("generated-word");
-        this.wordChoicesContainer = document.getElementById("word-choices");
-        this.chatInput = document.getElementById("chat-input");
-        this.chatMessages = document.getElementById("chat-messages");
-        this.sendChatButton = document.getElementById("send-chat");
-        this.lobbyTimerLabel = document.getElementById("lobby-timer");
-        this.overlay = document.getElementById("overlay");
-        this.roundLabel = document.getElementById("round-label");
-        this.timerLabel = document.getElementById("base-timer-label");
-        this.lobbymessage = document.getElementById("lobby-message"); // Adaugă această linie
-
-    }
-
-    updateLobbyTimer(time) {
-        this.lobbyTimerLabel.textContent = `Timp rămas: ${time}s`;
-        if (time <= 0) {
-            this.lobbyTimerLabel.textContent = null // Ascunde overlay-ul când timpul ajunge la 0
-            this.lobbymessage.textContent = null;
-        }
-    }
-    
-
-    showWordChoices(words, callback) {
-        this.overlay.style.display = "flex";
-        this.wordChoicesContainer.innerHTML = "";
-
-        words.forEach((word) => {
-            const button = document.createElement("button");
-            button.textContent = word;
-            button.addEventListener("click", () => {
-                callback(word);
-                this.overlay.style.display = "none";
-            });
-            this.wordChoicesContainer.appendChild(button);
-        });
-    }
-
-    addChatMessage(message) {
-        const chatMessage = document.createElement("div");
-        chatMessage.textContent = message;
-        this.chatMessages.appendChild(chatMessage);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-    }
-
-    resetCanvas() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-
-    displayCurrentWord(word) {
-        if (!word) {
-            this.generatedWordElement.textContent = ""; // Șterge cuvântul afișat
-        } else {
-            this.generatedWordElement.textContent = `Cuvânt selectat: ${word}`;
-        }
-    }
-
-    updateBrushSize(size) {
-        this.brushSize.value = size;
-    }
-
-    updateColor(color) {
-        this.colorPicker.value = color;
-    }
-
-    toggleEraser(active) {
-        this.eraserButton.textContent = active ? "Desen" : "Eraser";
-    }
-
-    updateRound(currentRound, totalRounds) {
-        this.roundLabel.textContent = `Runda: ${currentRound}/${totalRounds}`;
-    }
-
-    updateGameTimer(minutes, seconds) {
-        this.timerLabel.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-    }
-
-    disableCanvas() {
-        this.canvas.style.pointerEvents = "none";  // Dezactivăm canvas-ul pentru cei care nu sunt artisti
-    }
-
-    enableCanvas() {
-        this.canvas.style.pointerEvents = "auto";  // Activăm canvas-ul pentru artisti
-    }
-}
 
 // Controller
 class GameController {
-    constructor(model, view) {
+    constructor(model = new GameModel(), view = new GameView()) {
         this.model = model;
         this.view = view;
         this.socket = new WebSocket("ws://localhost:3000");
         this.roundTimer = null;
         this.initEventListeners();
+    }
+    someMethodThatNeedsToBeCalled() {
+        console.log("Aceasta este o metodă suplimentară.");
     }
 
     initEventListeners() {
@@ -359,5 +209,4 @@ class GameController {
     }
 }
 
-// Initialize the application
 const app = new GameController(new GameModel(), new GameView());
