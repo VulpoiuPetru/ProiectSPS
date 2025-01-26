@@ -5,29 +5,29 @@ document.querySelector("form").addEventListener("submit", async (e) => {
     const password = e.target[1].value;
 
     if (username && password) {
-    try {
-        // Citește JSON-ul cu utilizatori
-        const response = await fetch("users.json");
-        if (!response.ok) {
-            throw new Error("Eroare la încărcarea fișierului JSON");
+        try {
+            // Trimite datele către backend pentru autentificare
+            const response = await fetch("http://localhost:3000/login", { // Adresa backend-ului
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ username, password }),
+            });
+
+            if (response.ok) {
+                // Autentificare reușită - redirecționează utilizatorul
+                window.location.href = "index.html";
+            } else {
+                // Afișează eroarea primită de la server
+                const errorData = await response.json();
+                alert(errorData.message || "Username sau parola incorectă!");
+            }
+        } catch (error) {
+            console.error("Eroare:", error);
+            alert("A apărut o eroare. Încearcă din nou mai târziu.");
         }
-
-        const users = await response.json();
-
-        // Verifică dacă există un utilizator cu acest username și parolă
-        const userExists = users.some(user => user.username === username && user.password === password);
-
-        if (userExists) {
-            // Redirecționare la index.html în cazul autentificării reușite
-            window.location.href = "index.html";
-        } else {
-            alert("Username sau parola incorectă!");
-        }
-    } catch (error) {
-        console.error("Eroare:", error);
-        alert("A apărut o eroare. Încearcă din nou mai târziu.");
+    } else {
+        alert("Introduceți un username și o parolă valide!");
     }
-} else {
-    alert("Introduceți un username și o parolă valide!");
-}
 });
