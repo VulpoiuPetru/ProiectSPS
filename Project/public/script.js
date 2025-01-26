@@ -1,335 +1,318 @@
-const canvas = document.getElementById("drawing-canvas");
-const ctx = canvas.getContext("2d");
-const clearButton = document.getElementById("clear");
-const eraserButton = document.getElementById("eraser");
-const colorPicker = document.getElementById("color-picker");
-const brushSize = document.getElementById("brush-size");
-const generatedWordElement = document.getElementById("generated-word");
-const wordChoicesContainer = document.getElementById("word-choices");
-const chatInput = document.getElementById("chat-input");
-const chatMessages = document.getElementById("chat-messages");
-const sendChatButton = document.getElementById("send-chat");
-const lobbyContainer = document.getElementById("lobby-container");
-const lobbyTimerLabel = document.getElementById("lobby-timer");
-const overlay = document.getElementById("overlay");
-
-let drawing = false;
-let lastCoords = null;
-let color = "#000000";
-let lineWidth = 5;
-let eraserActive = false;
-let inLobby = true;
-let gameStarted = false;
-let isArtist = false;
-
-// Conectare WebSocket
-const socket = new WebSocket("ws://localhost:3000");
-
-// Funcționalitate desenare (desenul permis doar după lobby)
-canvas.addEventListener("mousedown", (e) => {
-    if (!gameStarted || inLobby || !isArtist) return;
-    drawing = true;
-    lastCoords = { x: e.offsetX, y: e.offsetY };
-    ctx.beginPath();
-    ctx.moveTo(lastCoords.x, lastCoords.y);
-
-    socket.send(
-        JSON.stringify({
-            type: "start",
-            x: lastCoords.x,
-            y: lastCoords.y,
-            color: eraserActive ? "#ffffff" : color,
-            lineWidth,
-        })
-    );
-});
-
-canvas.addEventListener("mousemove", (e) => {
-    if (!drawing || !lastCoords || !gameStarted || inLobby|| !isArtist) return;
-
-    ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = eraserActive ? "#ffffff" : color;
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-
-    socket.send(
-        JSON.stringify({
-            type: "draw",
-            fromX: lastCoords.x,
-            fromY: lastCoords.y,
-            toX: e.offsetX,
-            toY: e.offsetY,
-        })
-    );
-
-    lastCoords = { x: e.offsetX, y: e.offsetY };
-});
-
-canvas.addEventListener("mouseup", () => {
-    if (!drawing|| !isArtist) return;
-    drawing = false;
-    ctx.closePath();
-    lastCoords = null;
-    socket.send(JSON.stringify({ type: "stop" }));
-});
-
-canvas.addEventListener("mouseout", () => {
-    if (!drawing|| !isArtist) return;
-    drawing = false;
-    ctx.closePath();
-    lastCoords = null;
-    socket.send(JSON.stringify({ type: "stop" }));
-});
-
-clearButton.addEventListener("click", () => {
-    if (!isArtist) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    socket.send(JSON.stringify({ type: "clear" }));
-});
-
-eraserButton.addEventListener("click", () => {
-    if (!isArtist) return;
-    eraserActive = !eraserActive;
-    eraserButton.textContent = eraserActive ? "Desen" : "Eraser";
-});
-
-colorPicker.addEventListener("input", (e) => (color = e.target.value));
-brushSize.addEventListener("input", (e) => (lineWidth = e.target.value));
-
-// Funcționalitate chat
-sendChatButton.addEventListener("click", () => {
-    const message = chatInput.value.trim();
-    if (message) {
-        socket.send(JSON.stringify({ type: "chat", message }));
-        chatInput.value = "";
+class GameModel {
+    constructor() {
+        this.players = [];
+        this.currentWord = "";
+        this.isArtist = false;
+        this.lobbyTime = 30;
+        this.gameStarted = false;
+        this.drawingData = [];
+        this.chatMessages = [];
+        this.color = "#000000";
+        this.lineWidth = 5;
+        this.eraserActive = false;
+        this.totalRounds = 0;
+        this.currentRound = 0;
+        this.drawing = false;
+        this.currentPlayer = null; // Noul jucător curent
     }
-});
 
-// Gestionare mesaje primite de la server
-socket.addEventListener("message", (event) => {
-    const data = JSON.parse(event.data);
+    setWord(word) {
+        this.currentWord = word;
+    }
 
-    if (data.type === "reset-artist") {
-        isArtist = false; // Resetează statusul de artist
-        console.log("Nu mai sunt artist.");
+    addChatMessage(message) {
+        this.chatMessages.push(message);
     }
-    else
-    if (data.type === "artist-status") {
-        isArtist = data.isArtist; // Actualizează statusul de artist
-        console.log(isArtist ? "Sunt artist!" : "Nu sunt artist.");
-    }
-    else
-    if (data.type === "start-timer") {
-        startGameTimer(data.time); // Pornește timerul
-    } else if (data.type === "update-timer") {
-        const timerLabel = document.getElementById("base-timer-label");
-        const minutes = Math.floor(data.time / 60);
-        const seconds = data.time % 60;
-        timerLabel.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-    }
-    
-    if (data.type === "lobby-timer") {
-        lobbyTimerLabel.textContent = `Timp rămas: ${data.time}s`;
-        if (data.time <= 0) {
-            inLobby = false;
-            lobbyContainer.style.display = "none";
-            gameStarted = true;
-        }
-    } else if (data.type === "choose-word") {
-        overlay.style.display = "flex";
-        wordChoicesContainer.innerHTML = "";
-        isArtist = true;
 
-        data.words.forEach((word) => {
+    startGame() {
+        this.gameStarted = true;
+    }
+
+    resetGame() {
+        this.gameStarted = false;
+        this.currentWord = "";
+        this.drawingData = [];
+        this.currentRound = 0;
+        this.currentPlayer = null;
+    }
+
+    toggleEraser() {
+        this.eraserActive = !this.eraserActive;
+    }
+
+    setColor(color) {
+        this.color = color;
+    }
+
+    setLineWidth(width) {
+        this.lineWidth = width;
+    }
+
+    setRounds(totalRounds) {
+        this.totalRounds = totalRounds;
+    }
+
+    incrementRound() {
+        this.currentRound += 1;
+    }
+
+    setArtist(playerId) {
+        this.currentPlayer = playerId;
+        this.isArtist = (this.currentPlayer === playerId);  // doar jucătorul curent poate fi artist
+    }
+}
+
+class GameView {
+    constructor() {
+        this.canvas = document.getElementById("drawing-canvas");
+        this.ctx = this.canvas.getContext("2d");
+        this.clearButton = document.getElementById("clear");
+        this.eraserButton = document.getElementById("eraser");
+        this.colorPicker = document.getElementById("color-picker");
+        this.brushSize = document.getElementById("brush-size");
+        this.generatedWordElement = document.getElementById("generated-word");
+        this.wordChoicesContainer = document.getElementById("word-choices");
+        this.chatInput = document.getElementById("chat-input");
+        this.chatMessages = document.getElementById("chat-messages");
+        this.sendChatButton = document.getElementById("send-chat");
+        this.lobbyTimerLabel = document.getElementById("lobby-timer");
+        this.overlay = document.getElementById("overlay");
+        this.roundLabel = document.getElementById("round-label");
+        this.timerLabel = document.getElementById("base-timer-label");
+    }
+
+    updateLobbyTimer(time) {
+        this.lobbyTimerLabel.textContent = `Timp rămas: ${time}s`;
+    }
+
+    showWordChoices(words, callback) {
+        this.overlay.style.display = "flex";
+        this.wordChoicesContainer.innerHTML = "";
+
+        words.forEach((word) => {
             const button = document.createElement("button");
             button.textContent = word;
             button.addEventListener("click", () => {
-                socket.send(JSON.stringify({ type: "choose-word", word }));
-                overlay.style.display = "none";
-                generatedWordElement.textContent = `Cuvânt selectat: ${word}`;
+                callback(word);
+                this.overlay.style.display = "none";
             });
-            wordChoicesContainer.appendChild(button);
+            this.wordChoicesContainer.appendChild(button);
         });
-         }
-        //  else if (data.type === "reset-game") {
-        //     resetGameUI(); // Resetează interfața pentru toți ceilalți
-        // }
-          else if (data.type === "update-timer") {
-        const timerLabel = document.getElementById("base-timer-label");
-        const minutes = Math.floor(data.time / 60);
-        const seconds = data.time % 60;
-        timerLabel.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-    } else if (data.type === "system") {
-        console.log(data.message);
     }
-     else if (data.type === "chosen-word") {
-        isArtist = data.artist === socket.id; // Compară cu ID-ul WebSocket
-        generatedWordElement.textContent = `Cuvânt selectat: ${data.word}`;
-    } else if (data.type === "chat") {
+
+    addChatMessage(message) {
         const chatMessage = document.createElement("div");
-        chatMessage.textContent = data.message;
-        chatMessages.appendChild(chatMessage);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    } else if (data.type === "start") {
-        ctx.beginPath();
-        ctx.moveTo(data.x, data.y);
-        ctx.strokeStyle = data.color;
-        ctx.lineWidth = data.lineWidth;
-    } else if (data.type === "draw") {
-        ctx.lineWidth = data.lineWidth;
-        ctx.strokeStyle = data.color;
-        ctx.moveTo(data.fromX, data.fromY);
-        ctx.lineTo(data.toX, data.toY);
-        ctx.stroke();
-    } else if (data.type === "stop") {
-        ctx.closePath();
-    } else if (data.type === "clear") {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        chatMessage.textContent = message;
+        this.chatMessages.appendChild(chatMessage);
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
 
-    if (data.type === "system" && data.message.includes("O nouă rundă începe")) {
-        resetCanvas();
+    resetCanvas() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    if (data.type === "system" && data.message.includes("Ghiciți:")) {
-        const generatedWordElement = document.getElementById("generated-word");
-        const wordPlaceholder = data.message.split("Ghiciți: ")[1];
-        generatedWordElement.textContent = `Cuvânt de ghicit: ${wordPlaceholder}`;
+    displayCurrentWord(word) {
+        this.generatedWordElement.textContent = `Cuvânt selectat: ${word}`;
     }
 
-    if (data.type === "reset-game") {
-        resetGameUI(); // Resetează interfața doar pentru ceilalți jucători
+    updateBrushSize(size) {
+        this.brushSize.value = size;
     }
 
-    
-    if (data.type === "round-update") {
-        const roundLabel = document.getElementById("round-label");
-        roundLabel.textContent = `Runda: ${data.currentRound}/${data.totalRounds}`;
+    updateColor(color) {
+        this.colorPicker.value = color;
     }
 
-    if (data.type === "game-over") {
-        alert(data.message); // Notifică jucătorii
-        redirectToLogin();  // Redirecționează la login
+    toggleEraser(active) {
+        this.eraserButton.textContent = active ? "Desen" : "Eraser";
     }
-    if (data.type === "system") {
-        const chatMessage = document.createElement("div");
-        chatMessage.textContent = data.message;
 
-        // Evidențiază mesajele de eroare
-        if (data.message.includes("Ai ghicit deja cuvântul")) {
-            chatMessage.style.color = "red";
-            chatMessage.style.fontWeight = "bold";
-        }
-
-        chatMessages.appendChild(chatMessage);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+    updateRound(currentRound, totalRounds) {
+        this.roundLabel.textContent = `Runda: ${currentRound}/${totalRounds}`;
     }
-});
 
+    updateGameTimer(minutes, seconds) {
+        this.timerLabel.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    }
 
-function startGameTimer(duration) {
-    let timeLeft = duration;
-    const timerLabel = document.getElementById("base-timer-label");
+    disableCanvas() {
+        this.canvas.style.pointerEvents = "none";  // Dezactivăm canvas-ul pentru cei care nu sunt artisti
+    }
 
-    const timerInterval = setInterval(() => {
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            timerLabel.textContent = "00:00";
-            resetGameUI();
-            // alert("Timpul a expirat! Jocul s-a terminat.");
-        } else {
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            timerLabel.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-            timeLeft--;
-        }
-    }, 1000);
-}
-function resetCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    enableCanvas() {
+        this.canvas.style.pointerEvents = "auto";  // Activăm canvas-ul pentru artisti
+    }
 }
 
-
-function resetGameUI() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Curăță canvas-ul
-
-    if (!isArtist) {
-        // Ascunde overlay-ul doar pentru jucătorii care nu sunt artiști
-        overlay.style.display = "none";
+// Controller
+class GameController {
+    constructor(model, view) {
+        this.model = model;
+        this.view = view;
+        this.socket = new WebSocket("ws://localhost:3000");
+        this.roundTimer = null;
+        this.initEventListeners();
     }
 
-    generatedWordElement.textContent = "Cuvânt de ghicit: _______";
+    initEventListeners() {
+        // WebSocket events
+        this.socket.addEventListener("message", (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === "lobby-timer") {
+                this.model.lobbyTime = data.time;
+                this.view.updateLobbyTimer(data.time);
+                if (data.time <= 0) {
+                    this.model.startGame();
+                    this.view.overlay.style.display = "none";
+                    this.socket.send(JSON.stringify({ type: "start-game" }));
+                }
+            } else if (data.type === "choose-word") {
+                // Permitem artistului să aleagă cuvântul
+                this.model.isArtist = true;
+                this.view.enableCanvas();
+                this.view.showWordChoices(data.words, (word) => {
+                    this.socket.send(JSON.stringify({ type: "choose-word", word }));
+                    this.model.setWord(word);
+                    this.view.displayCurrentWord(word);
+                });
+            } else if (data.type === "round-update") {
+                // Începem noua rundă și resetăm canvas-ul
+                this.view.updateRound(data.currentRound, data.totalRounds);
+                this.model.incrementRound();
+                this.view.resetCanvas();
+                this.socket.send(JSON.stringify({ type: "new-round" }));
+            } else if (data.type === "start-timer") {
+                this.startRoundTimer(data.time);
+            } else if (data.type === "chat") {
+                this.model.addChatMessage(data.message);
+                this.view.addChatMessage(data.message);
+            }else if (data.type === "system") {
+                // Adăugăm mesajele de sistem în UI
+                const chatMessage = document.createElement("div");
+                chatMessage.textContent = data.message;
+        
+                // Evidențiem mesajele importante
+                if (data.message.includes("Ai ghicit deja cuvântul")) {
+                    chatMessage.style.color = "red";
+                    chatMessage.style.fontWeight = "bold";
+                }
+        
+                this.view.chatMessages.appendChild(chatMessage);
+                this.view.chatMessages.scrollTop = this.view.chatMessages.scrollHeight;
+            }
+             else if (data.type === "start") {
+                this.view.ctx.beginPath();
+                this.view.ctx.moveTo(data.x, data.y);
+                this.view.ctx.strokeStyle = data.color;
+                this.view.ctx.lineWidth = data.lineWidth;
+            } else if (data.type === "draw") {
+                this.view.ctx.lineWidth = data.lineWidth;
+                this.view.ctx.strokeStyle = data.color;
+                this.view.ctx.lineTo(data.toX, data.toY);
+                this.view.ctx.stroke();
+            } else if (data.type === "clear") {
+                this.view.resetCanvas();
+            } else if (data.type === "set-artist") {
+                // Setăm artistul pentru runda curentă
+                this.model.setArtist(data.playerId);
+                if (this.model.isArtist) {
+                    this.view.enableCanvas(); // Permitem artistului să deseneze
+                } else {
+                    this.view.disableCanvas(); // Dezactivăm canvas-ul pentru ceilalți
+                }
+            }
+        });
+
+        // Drawing events
+        this.view.canvas.addEventListener("mousedown", (e) => {
+            if (!this.model.gameStarted || !this.model.isArtist) return;
+            this.model.drawing = true;
+            const coords = { x: e.offsetX, y: e.offsetY };
+            this.view.ctx.beginPath();
+            this.view.ctx.moveTo(coords.x, coords.y);
+            this.socket.send(
+                JSON.stringify({
+                    type: "start",
+                    x: coords.x,
+                    y: coords.y,
+                    color: this.model.eraserActive ? "#ffffff" : this.model.color,
+                    lineWidth: this.model.lineWidth,
+                })
+            );
+        });
+
+        this.view.canvas.addEventListener("mousemove", (e) => {
+            if (!this.model.drawing || !this.model.isArtist) return;
+            const coords = { x: e.offsetX, y: e.offsetY };
+            this.view.ctx.lineWidth = this.model.lineWidth;
+            this.view.ctx.strokeStyle = this.model.eraserActive ? "#ffffff" : this.model.color;
+            this.view.ctx.lineTo(coords.x, coords.y);
+            this.view.ctx.stroke();
+            this.socket.send(
+                JSON.stringify({
+                    type: "draw",
+                    toX: coords.x,
+                    toY: coords.y,
+                    color: this.model.eraserActive ? "#ffffff" : this.model.color,
+                    lineWidth: this.model.lineWidth,
+                })
+            );
+        });
+
+        this.view.canvas.addEventListener("mouseup", () => {
+            if (!this.model.isArtist) return;
+            this.model.drawing = false;
+            this.view.ctx.closePath();
+        });
+
+        // UI Events
+        this.view.clearButton.addEventListener("click", () => {
+            if (!this.model.isArtist) return;
+            this.view.resetCanvas();
+            this.socket.send(JSON.stringify({ type: "clear" }));
+        });
+
+        this.view.eraserButton.addEventListener("click", () => {
+            this.model.toggleEraser();
+            this.view.toggleEraser(this.model.eraserActive);
+        });
+
+        this.view.colorPicker.addEventListener("input", (e) => {
+            this.model.setColor(e.target.value);
+        });
+
+        this.view.brushSize.addEventListener("input", (e) => {
+            this.model.setLineWidth(e.target.value);
+        });
+
+        this.view.sendChatButton.addEventListener("click", () => {
+            const message = this.view.chatInput.value.trim();
+    if (message) {
+        this.socket.send(JSON.stringify({ type: "chat", message }));
+        this.view.chatInput.value = ""; // Resetăm input-ul
+    }
+        });
+    }
+
+    startRoundTimer(duration) {
+        clearInterval(this.roundTimer);
+        let timeLeft = duration;
+
+        this.roundTimer = setInterval(() => {
+            if (timeLeft <= 0) {
+                clearInterval(this.roundTimer);
+                this.socket.send(JSON.stringify({ type: "round-over" }));
+                this.view.updateGameTimer(0, 0);
+            } else {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                this.view.updateGameTimer(minutes, seconds);
+                timeLeft--;
+            }
+        }, 1000);
+    }
 }
-function redirectToLogin() {
-    // Ascunde elementele jocului
-    document.querySelector(".game-container").style.display = "none";
-    document.getElementById("timer-container").style.display = "none";
-    document.getElementById("lobby-container").style.display = "none";
 
-    // Redirecționează către pagina de login
-    window.location.href = "/";
-}
-
-
-// socket.addEventListener("message", (event) => {
-//     const data = JSON.parse(event.data);
-
-   
-// });
-
-// socket.addEventListener("message", (event) => {
-//     const data = JSON.parse(event.data);
-
-//     if (data.type === "system" && data.message.includes("Ghiciți:")) {
-//         const generatedWordElement = document.getElementById("generated-word");
-//         const wordPlaceholder = data.message.split("Ghiciți: ")[1];
-//         generatedWordElement.textContent = `Cuvânt de ghicit: ${wordPlaceholder}`;
-//     }
-// });
-// socket.addEventListener("message", (event) => {
-//     const data = JSON.parse(event.data);
-
-//     if (data.type === "reset-game") {
-//         resetGameUI(); // Resetează interfața doar pentru ceilalți jucători
-//     }
-// });
-
-
-// socket.addEventListener("message", (event) => {
-//     const data = JSON.parse(event.data);
-
-//     if (data.type === "round-update") {
-//         const roundLabel = document.getElementById("round-label");
-//         roundLabel.textContent = `Runda: ${data.currentRound}/${data.totalRounds}`;
-//     }
-// });
-
-
-// socket.addEventListener("message", (event) => {
-//     const data = JSON.parse(event.data);
-
-//     if (data.type === "game-over") {
-//         alert(data.message); // Notifică jucătorii
-//         redirectToLogin();  // Redirecționează la login
-//     }
-// });
-
-
-// socket.addEventListener("message", (event) => {
-//     const data = JSON.parse(event.data);
-
-//     if (data.type === "system") {
-//         const chatMessage = document.createElement("div");
-//         chatMessage.textContent = data.message;
-
-//         // Evidențiază mesajele de eroare
-//         if (data.message.includes("Ai ghicit deja cuvântul")) {
-//             chatMessage.style.color = "red";
-//             chatMessage.style.fontWeight = "bold";
-//         }
-
-//         chatMessages.appendChild(chatMessage);
-//         chatMessages.scrollTop = chatMessages.scrollHeight;
-//     }
-// });
+// Initialize the application
+const app = new GameController(new GameModel(), new GameView());
