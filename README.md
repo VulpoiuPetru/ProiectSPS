@@ -1,8 +1,8 @@
-Interactive Web Drawing Game
+# Interactive Web Drawing Game
 
 Proiectul este un joc web interactiv care permite utilizatorilor să deseneze și să ghicească cuvinte alături de prieteni, oferind o experiență distractivă și competitivă. Jocul este accesibil direct din browser, eliminând necesitatea instalării aplicațiilor. Acesta rezolvă problema lipsei unei platforme rapide și accesibile pentru activități recreative, conectând oameni prin creativitate și competiție.Utilizatorii pot participa la sesiuni de joc în care unul dintre ei desenează un cuvânt primit, iar ceilalți încearcă să-l ghicească într-un timp limitat. Designul intuitiv și interactiv permite o experiență ușor de utilizat, făcând jocul potrivit pentru toate vârstele.
 
-Structura Proiectului
+# Structura Proiectului
 
 1. Controllers
 
@@ -56,3 +56,19 @@ Include fișiere de testare și exemple pentru validarea funcționalităților a
 
 server.js și server1.js: Fișiere care definesc serverul aplicației, gestionând conexiunile și interacțiunile dintre client și server.
 
+# Diagrama Structurii Proiectului
+
+![Diagram](Image/Diagrama.png)
+
+# Cum să Rulezi Proiectul
+1. Clonează repository-ul:
+  > git clone https://github.com/VulpoiuPetru/ProiectSPS.git
+
+2.Instalează dependențele:
+> npm install
+
+3. Rulează serverul:
+> node server.js
+
+4. Accesează aplicația în browser:
+> http://localhost:3000
