@@ -4,7 +4,7 @@ const path = require("path");
 const WebSocket = require("ws");
 
 const authController = require("./controllers/authController");
-const serverController = require("./controllers/serverController");
+const gameController = require("./controllers/serverController");
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
