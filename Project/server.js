@@ -21,4 +21,4 @@ const server = app.listen(3000, () => {
     console.log(`Serverul rulează la: http://localhost:3000`);
 });
 const wss = new WebSocket.Server({ server });
-serverController.initWebSocket(wss);
+gameController.initWebSocket(wss);
