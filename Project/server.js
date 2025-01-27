@@ -4,7 +4,7 @@ const path = require("path");
 const WebSocket = require("ws");
 
 const authController = require("./controllers/authController");
-const gameController = require("./controllers/serverController");
+const serverController = require("./controllers/serverController");
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -21,4 +21,4 @@ const server = app.listen(3000, () => {
     console.log(`Serverul rulează la: http://localhost:3000`);
 });
 const wss = new WebSocket.Server({ server });
-gameController.initWebSocket(wss);
+serverController.initWebSocket(wss);
