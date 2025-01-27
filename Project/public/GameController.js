@@ -11,9 +11,6 @@ class GameController {
         this.roundTimer = null;
         this.initEventListeners();
     }
-    someMethodThatNeedsToBeCalled() {
-        console.log("Aceasta este o metodă suplimentară.");
-    }
 
     initEventListeners() {
         // WebSocket events

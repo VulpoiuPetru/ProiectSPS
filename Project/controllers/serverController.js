@@ -74,7 +74,7 @@ wss.on("connection", (ws) => {
     console.log("Un nou jucător s-a conectat.");
     lobby.push(ws);
 
-    if (!gameStarted && lobby.length === 1) {
+    if (!gameStarted && lobby.length === 2) {
         lobbyTimeLeft = 10;
         startLobbyTimer();
     }
