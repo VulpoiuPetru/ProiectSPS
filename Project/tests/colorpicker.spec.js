@@ -1,5 +1,8 @@
 const { test, expect } = require('@playwright/test');
 
+
+//teste unitare
+
 // Test pentru logare cu credentiale valide
 test.describe('Testare Logare', () => {
     test('Logare reusita', async ({ page }) => {
@@ -134,55 +137,78 @@ test.describe('WebSocket Drawing Integration', () => {
         expect(mockSocket.lastMessage).toBe(JSON.stringify(selectedWordData));
     });
 });
+test.describe('WebSocket Integration Test', () => {
+    test('should connect and send a chat message', async () => {
+        // Creare conexiune WebSocket la server
+        const ws = new WebSocket('ws://localhost:3000'); // Adaptează URL-ul dacă este alt port/server
+
+        // Promisiuni pentru a verifica evenimentele de conectare și mesaje
+        const connectPromise = new Promise((resolve, reject) => {
+            ws.on('open', resolve);
+            ws.on('error', reject);
+        });
+
+        const messagePromise = new Promise((resolve) => {
+            ws.on('message', (message) => {
+                const data = JSON.parse(message);
+                if (data.type === 'chat' && data.message === 'Hello, WebSocket!') {
+                    resolve(data);
+                }
+            });
+        });
+
+        // Așteaptă conectarea
+        await connectPromise;
+
+        // Trimite un mesaj de tip `chat`
+        ws.send(JSON.stringify({ type: 'chat', message: 'Hello, WebSocket!' }));
+
+        // Verifică dacă mesajul a fost primit corect
+        const receivedMessage = await messagePromise;
+        expect(receivedMessage).toEqual({
+            type: 'chat',
+            message: 'Hello, WebSocket!',
+        });
+
+        // Închide conexiunea
+        ws.close();
+    });
+});
 
 
+test.describe('E2E Test - Complete Game Flow', () => {
+    test('should allow user to login, pick a word, and draw', async ({ page }) => {
+        await page.goto('http://localhost:3000');
 
-// // Test pentru API Timer Update
-// test.describe('API Timer Update', () => {
-//     test('should update timer label correctly', async ({ page }) => {
-//         document.body.innerHTML = '<div id="base-timer-label"></div>';
-//         const mockMessage = {
-//             type: 'update-timer',
-//             time: 125
-//         };
+        // Autentificare
+        await page.fill('input[name="username"]', 'petru');
+        await page.fill('input[name="password"]', '123');
+        await page.click('input[type="submit"]');
+        await expect(page).toHaveURL('http://localhost:3000/index.html');
 
-//         const timerLabel = document.getElementById('base-timer-label');
+        // Alege cuvânt
+        const wordButton = page.locator('#word-choices button');
+        await wordButton.first().click();
 
-//         // Funcția din cod pentru actualizare
-//         const handleMessage = (data) => {
-//             if (data.type === 'update-timer') {
-//                 const minutes = Math.floor(data.time / 60);
-//                 const seconds = data.time % 60;
-//                 timerLabel.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-//             }
-//         };
+        // Desenează
+        const canvas = page.locator('canvas');
+        await canvas.click({ position: { x: 100, y: 100 } });
+        await canvas.click({ position: { x: 200, y: 200 } });
 
-//         handleMessage(mockMessage);
-//         expect(timerLabel.textContent).toBe('02:05');
-//     });
-// });
+        // Validare că s-au trimis evenimentele de desen
+        const sentEvents = await page.evaluate(() => window.sentEvents);
+        expect(sentEvents.length).toBeGreaterThan(0);
+    });
+});
 
-// // Test pentru performanță
-// test.describe('Performance Test: Drawing', () => {
-//     test('should handle 1000 drawing events efficiently', async ({ page }) => {
-//         const mockSocket = { send: jest.fn() };
-//         const start = performance.now();
 
-//         for (let i = 0; i < 1000; i++) {
-//             const data = {
-//                 type: 'draw',
-//                 fromX: i,
-//                 fromY: i,
-//                 toX: i + 1,
-//                 toY: i + 1
-//             };
-//             mockSocket.send(JSON.stringify(data));
-//         }
+test.describe('Performance Test - Page Load', () => {
+    test('should load login page in under 1s', async ({ page }) => {
+        const startTime = Date.now();
+        await page.goto('http://localhost:3000');
+        const endTime = Date.now();
+        const loadTime = endTime - startTime;
 
-//         const end = performance.now();
-//         const duration = end - start;
-
-//         expect(duration).toBeLessThan(500); // Testăm dacă evenimentele sunt procesate în mai puțin de 500ms
-//         expect(mockSocket.send).toHaveBeenCalledTimes(1000);
-//     });
-// });
+        expect(loadTime).toBeLessThan(1000); // Timpul maxim permis este 1s
+    });
+});
