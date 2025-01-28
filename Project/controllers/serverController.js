@@ -1,3 +1,5 @@
+const WebSocket = require('ws');
+
 module.exports.initWebSocket = (wss) => {
 //const wss = new WebSocket.Server({ server });
 let lobby = [];

@@ -73,7 +73,7 @@ app.post("/login", async (req, res) => {
             loggedInUsers.push(username);
             return res.redirect("/index.html");
         } else {
-            return res.send(`<script>alert('You didn\\'t write good!'); window.location='/';</script>`);
+            return res.send(`<script>alert('Invalid credentials!'); window.location='/';</script>`);
         }
     } catch (err) {
         console.error("Eroare la baza de date:", err);
