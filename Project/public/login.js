@@ -29,5 +29,6 @@ document.querySelector("form").addEventListener("submit", async (e) => {
         }
     } else {
         alert("Introduceți un username și o parolă valide!");
-    }
+    }git
+    
 });
